@@ -1,0 +1,16 @@
+{
+  "parser": "@babel/eslint-parser",
+  "extends": "standard",
+  "env": {
+    "node": true,
+    "es2022": true,
+    "es6": true,
+    "mocha": true
+  },
+  "parserOptions": {
+    "requireConfigFile": false
+  },
+  "rules": {
+    "func-style": [2, "declaration", { "allowArrowFunctions": true }]
+  }
+}

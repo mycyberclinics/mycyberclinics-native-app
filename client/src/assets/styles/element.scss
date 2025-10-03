@@ -1,0 +1,20 @@
+/* element.scss */
+
+// Your custom styles for Element Plus components
+.el-collapse-item__header {
+  font-size: $font-medium;
+}
+.el-collapse-item__content {
+  font-size: $font-small;
+}
+.el-collapse {
+  max-width: 38rem;
+}
+
+@media (max-width: 768px) {
+  .el-collapse {
+    max-width: 320px;
+  }
+}
+
+
