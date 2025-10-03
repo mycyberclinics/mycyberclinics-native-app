@@ -3,8 +3,12 @@ name: Ci Pipeline
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'client/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'client/**'
 
 jobs:
   build-and-run:
@@ -21,6 +25,8 @@ jobs:
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+        working-directory: client
 
       - name: Run the project
         run: npm start
+        working-directory: client
