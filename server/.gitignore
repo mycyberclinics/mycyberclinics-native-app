@@ -1,19 +1,58 @@
+### Node / TypeScript / Project files
+node_modules/
+dist/
+build/
+/.turbo
+
+### Environment & secrets
+.env
+.env.*
+*.local
+firebase-service-account.json
+
+### Logs
 logs
 *.log
 npm-debug.log*
-pids
-*.pid
-*.seed
-lib-cov
-coverage
-.grunt
-.lock-wscript
-build/Release
-node_modules
-.npm
-.node_repl_history
-app
-.vscode
-.idea
-src/config/secret.js
-upload
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+### OS / Editor / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+### TypeScript
+*.tsbuildinfo
+
+### Docker
+docker-compose.override.yml
+*.dockerfile
+
+### Misc
+.expo/
+/.expo-shared/
+coverage/
+/.next/
+/.expo/
+/.expo-shared/
+
+# Ignore local development sqlite/db files
+*.sqlite
+*.db
+
+# Ignore compiled native modules and temporary artifacts
+*.node
+tmp/
+temp/
+
+# Ignore credentials and service accounts accidentally added
+*.key
+*.pem
+*.p12

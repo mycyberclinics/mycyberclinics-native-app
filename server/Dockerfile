@@ -1,12 +1,6 @@
-FROM node:20.16-alpine3.19
-LABEL authors="johnelwoods"
-
+FROM node:20-alpine
 WORKDIR /app
-
-COPY ./package*.json ./
+COPY package*.json ./
 RUN npm install
-
-COPY ./ ./
-RUN npm run build
-
-CMD ["node", "src/index.js"]
+COPY . .
+CMD ["npm", "run", "start"]
