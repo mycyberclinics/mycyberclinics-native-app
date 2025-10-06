@@ -1,24 +1,33 @@
 version: '3.8'
 services:
+  api:
+    build: .
+    container_name: mycyberclinics-api
+    env_file: .env
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - mongo
+    command: npm run dev
+    networks:
+      - mycyberclinics-net
+
   mongo:
-    image: mongo:6
+    image: mongo:latest
     container_name: mycyberclinics-mongo
     ports:
       - "27017:27017"
     volumes:
-      - mongo-data:/data/db
-  backend:
-    build: .
-    container_name: mycyberclinics-backend
-    env_file:
-      - .env
-    ports:
-      - "4000:4000"
-    depends_on:
-      - mongo
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: npm run start
+      - mongo_data:/data/db
+    networks:
+      - mycyberclinics-net
+
 volumes:
-  mongo-data:
+  mongo_data:
+
+networks:
+  mycyberclinics-net:
+    driver: bridge
