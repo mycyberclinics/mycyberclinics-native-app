@@ -1,38 +1,30 @@
 import React from "react";
 import { View, Text, Image, Pressable, useColorScheme } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { LinearGradient } from "expo-linear-gradient";
 
 type ScreenProps = {
   onNext: () => void;
   onSkip: () => void;
   onSignIn: () => void;
+  onSignup: () => void;
   currentIndex: number;
   totalScreens: number;
 };
 
-export default function OnboardingScreen({
+export default function OnboardingScreen3({
   onNext,
   onSignIn,
   onSkip,
+  onSignup,
   currentIndex,
   totalScreens,
 }: ScreenProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  const gradientColors =
-    colorScheme === "dark"
-      ? (["rgba(0,0,0,0.95)", "rgba(0,0,0,0.7)", "transparent"] as const)
-      : ([
-          "rgba(255,255,255,0.9)",
-          "rgba(255,255,255,0.6)",
-          "transparent",
-        ] as const);
-
   return (
     <View
-      className={`flex flex-col items-center justify-center flex-1 px-6 w-[360px] h-auto mx-auto ${isDark ? "bg-[#0B0E11]" : "bg-transparent"} `}
+      className={`flex flex-col items-center justify-center flex-1 px-6 w-[360px] h-auto mx-auto ${isDark ? "bg-[#0B0E11]" : "bg-transparent"}`}
     >
       <StatusBar style={isDark ? "light" : "dark"} />
 
@@ -63,47 +55,35 @@ export default function OnboardingScreen({
         </Pressable>
       </View>
 
-      <View className="flex-col items-center justify-center w-[328px] h-[326px] ">
+      <View className="flex-col items-center justify-center w-[333px] h-[326px]">
         <Image
-          source={require("@/assets/images/onboarding1.png")}
+          source={require("@/assets/images/heroImage.png")}
           className="relative"
-        />
-        <View className="">
-          <LinearGradient
-            colors={gradientColors}
-            start={{ x: 0.5, y: 1 }}
-            end={{ x: 0.5, y: 0 }}
-            className="absolute bottom-[100%] left-[-38%] w-[253px] h-[100px]  "
-          />
-        </View>
-        <Image
-          source={require("@/assets/images/onboarding2.png")}
-          className="absolute bottom-[-23%] left-[50%] overflow-auto "
         />
       </View>
 
-      <View className="flex flex-col items-center justify-center mt-12 w-[328px] h-auto gap-[34px] py-4  ">
+      <View className="flex flex-col items-center justify-center mt-12 w-[328px] h-auto  gap-[34px] py-4 ">
         <View className="flex flex-col items-center justify-center ">
           <Text
-            className={`w-[263px] text-[32px] tex-center font-bold text-center ${
+            className={`w-[276px] text-[32px] tex-center font-bold text-center ${
               isDark ? "text-text-primaryDark" : "text-text-primaryLight"
             }`}
           >
-            Get Healthcare,{"\n"}Wherever You Are
+            Your Path to Better {"\n"} Health Starts With {"\n"} Cyberclinics
           </Text>
           <Text
-            className={`w-[328px] text-[16px] text-center mt-3 leading-5 ${
+            className={`w-[328px] text-[16px] text-center mt-3 leading-8 ${
               isDark ? "text-text-secondaryDark" : "text-text-secondaryLight"
             }`}
           >
-            Licensed doctors and specialists are just a tap away, from the
-            comfort of your home.
+            Your personal AI health companion that answers all your health
+            related questions
           </Text>
         </View>
 
         <View className="flex flex-col gap-6 w-[328px] mb-6 space-y-4  w-mt-auto">
           <Pressable
-            onPress={onNext}
+            onPress={onSignup}
             className="py-4 rounded-full bg-button-buttonBG active:opacity-80 "
           >
             <Text
@@ -113,7 +93,7 @@ export default function OnboardingScreen({
                   : "text-text-buttonSecondaryTextLight"
               }`}
             >
-              Continue
+              Get Started With Cyberclinics
             </Text>
           </Pressable>
 

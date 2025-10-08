@@ -17,7 +17,7 @@ export default function RootLayout() {
   //   const prepare = async () => {
   //     try {
   //       await SplashScreen.preventAutoHideAsync();
-  //       await new Promise((r) => setTimeout(r, 1000)); 
+  //       await new Promise((r) => setTimeout(r, 1000));
   //     } finally {
   //       await SplashScreen.hideAsync();
   //     }
@@ -55,7 +55,7 @@ function ThemedLayout({
         screenOptions={{
           headerShown: false,
           contentStyle: {
-            backgroundColor: isDark ? "#0B0E11" : "#FFFFFF",
+            backgroundColor: isDark ? "#0B0E11" : "#f5f5f5",
           },
         }}
       />
