@@ -1,11 +1,11 @@
 import { create } from 'zustand';
+import { getFirebaseAuth } from '@/lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as fbSignOut,
+  User as FirebaseUser,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import type { User as FirebaseUser } from 'firebase/auth';
 
 type AppUser = { id: string; email: string } | FirebaseUser | null;
 
@@ -34,12 +34,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   signIn: async (email, password) => {
     try {
       set({ loading: true, error: null });
+      const auth = await getFirebaseAuth();
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const { uid, email: em } = cred.user;
       set({ user: { id: uid, email: em || '' }, loading: false });
-      console.log('[AUTH] Firebase signIn success:', uid);
     } catch (err: any) {
-      console.error('[AUTH] signIn error', err);
       set({ error: err.message, loading: false });
     }
   },
@@ -47,23 +46,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUp: async (email, password) => {
     try {
       set({ loading: true, error: null });
+      const auth = await getFirebaseAuth();
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const { uid, email: em } = cred.user;
       set({ user: { id: uid, email: em || '' }, loading: false });
-      console.log('[AUTH] Firebase signUp success:', uid);
     } catch (err: any) {
-      console.error('[AUTH] signUp error', err);
       set({ error: err.message, loading: false });
     }
   },
 
   signOut: async () => {
     try {
+      const auth = await getFirebaseAuth();
       await fbSignOut(auth);
       set({ user: null });
-      console.log('[AUTH] Signed out');
     } catch (err) {
-      console.error('[AUTH] signOut error', err);
+      // Optionally handle error
     }
   },
 }));

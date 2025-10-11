@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuthStore } from '@/store/auth';
 import { useRouter } from 'expo-router';
+import { fetchProfile } from '@/lib/api/client';
 
 type FormValues = { email: string; password: string };
 
@@ -17,7 +18,14 @@ export default function SignUp() {
   const onSubmit = async (values: FormValues) => {
     await signUp(values.email, values.password);
     const user = useAuthStore.getState().user;
-    if (user) router.replace('/(main)/home');
+    if (user) {
+      try {
+        await fetchProfile(); // <-- backend upsert after signup
+      } catch (err) {
+        console.error('[SignUp] Backend profile fetch failed:', err);
+      }
+      router.replace('/(main)/home');
+    }
   };
 
   return (

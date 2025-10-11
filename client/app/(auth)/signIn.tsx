@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'reac
 import { useForm, Controller } from 'react-hook-form';
 import { useAuthStore } from '@/store/auth';
 import { useRouter } from 'expo-router';
+import { fetchProfile } from '@/lib/api/client';
 
 type FormValues = { email: string; password: string };
 
@@ -17,14 +18,27 @@ export default function SignIn() {
   const onSubmit = async (values: FormValues) => {
     await signIn(values.email, values.password);
     const user = useAuthStore.getState().user;
-    if (user) router.replace('/(main)/home');
+    if (user) {
+      try {
+        await fetchProfile(); // <-- backend upsert after login
+      } catch (err) {
+        console.error('[SignIn] Backend profile fetch failed:', err);
+      }
+      router.replace('/(main)/home');
+    }
   };
 
   const onGuest = async () => {
-    // treat guest as a sign-in with fixed email
     await signIn('guest@mycyberclinics.com', 'guest-pass');
     const user = useAuthStore.getState().user;
-    if (user) router.replace('/(main)/home');
+    if (user) {
+      try {
+        await fetchProfile();
+      } catch (err) {
+        console.error('[SignIn] Backend profile fetch failed:', err);
+      }
+      router.replace('/(main)/home');
+    }
   };
 
   return (

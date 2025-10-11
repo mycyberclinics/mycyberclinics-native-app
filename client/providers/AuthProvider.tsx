@@ -34,41 +34,38 @@
 // }
 
 import React, { useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { Platform } from 'react-native';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { useAuthStore } from '@/store/auth';
 
-const TOKEN_KEY = 'mc_firebase_id_token';
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // const setUser = useAuthStore((s) => s.setUser);
-  // const setInitializing = useAuthStore((s) => s.setInitializing);
-
   const setUser = useAuthStore((s) => s.setUser);
   const setInitializing = useAuthStore((s) => s.setInitializing);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      // setUser(firebaseUser);
-      // setInitializing(false);
+    let unsubscribe: (() => void) | undefined;
 
-      if (firebaseUser) {
-        const simplifiedUser = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email || '',
-        };
-        setUser(simplifiedUser);
+    // Async IIFE for awaiting getFirebaseAuth
+    (async () => {
+      const auth = await getFirebaseAuth();
 
-        const token = await firebaseUser.getIdToken();
-        await SecureStore.setItemAsync(TOKEN_KEY, token);
-      } else {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
-      }
-      setInitializing(false);
-    });
+      unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+        if (firebaseUser) {
+          const simplifiedUser = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email || '',
+          };
+          setUser(simplifiedUser);
+        } else {
+          setUser(null);
+        }
+        setInitializing(false);
+      });
+    })();
 
-    return unsubscribe;
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [setUser, setInitializing]);
 
   return <>{children}</>;
