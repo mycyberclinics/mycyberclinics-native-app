@@ -4,14 +4,18 @@ export interface IUser extends Document {
   uid: string;
   email: string;
   role: string;
-  // add other fields as needed (displayName, photoURL, metadata)
+  displayName?: string;
+  // add other fields as needed
 }
 
-const userSchema = new Schema<IUser>({
-  uid: { type: String, required: true, unique: true },
-  email: { type: String, required: true },
-  role: { type: String, default: "patient" },
-  // extra fields: name, phone, metadata, etc.
-}, { timestamps: true });
+const userSchema = new Schema<IUser>(
+  {
+    uid: { type: String, required: true, unique: true },
+    email: { type: String, required: true },
+    role: { type: String, default: "patient" },
+    displayName: { type: String },
+  },
+  { timestamps: true, collection: "User" } // <--- ADD THIS
+);
 
 export default model<IUser>("User", userSchema);

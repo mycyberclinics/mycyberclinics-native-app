@@ -28,7 +28,6 @@ type AuthState = {
 export const useAuthStore = create<AuthState>((set) => {
   // Subscribe once to Firebase auth state
   onAuthStateChanged(auth, async (firebaseUser) => {
-    console.log('onAuthStateChanged fired', firebaseUser?.uid, firebaseUser?.emailVerified);  //debugging please
     if (firebaseUser) {
       await reload(firebaseUser);
       set({

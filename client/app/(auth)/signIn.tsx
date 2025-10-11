@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuthStore } from '@/store/auth';
+import { fetchProfile } from '@/lib/api/client';
 
 type FormValues = { email: string; password: string };
 
@@ -46,12 +47,31 @@ export default function SignInScreen() {
     try {
       await signIn(data.email, data.password);
       const user = useAuthStore.getState().user;
-      if (user) router.replace('/(main)/home');
-    } catch (err) {
-      console.error('Sign-in error:', err);
-      alert('Failed to sign in. Please try again.');
+      if (user) {
+        try {
+          await fetchProfile(); // <-- backend upsert after login
+        } catch (err) {
+          console.error('[SignIn] Backend profile fetch failed:', err);
+        }
+        router.replace('/(main)/home');
+      }
+    } catch (error) {
+      console.error('[SignIn] Backend profile fetch failed:', error);
     }
   };
+
+  // const onGuest = async () => {
+  //   await signIn('guest@mycyberclinics.com', 'guest-pass');
+  //   const user = useAuthStore.getState().user;
+  //   if (user) {
+  //     try {
+  //       await fetchProfile();
+  //     } catch (err) {
+  //       console.error('[SignIn] Backend profile fetch failed:', err);
+  //     }
+  //     router.replace('/(main)/home');
+  //   }
+  // };
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
@@ -217,7 +237,7 @@ export default function SignInScreen() {
         {/* Sign up link */}
         <View className="flex-row justify-center mt-6 mb-10">
           <Text className={isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'}>
-            {"Don't have an account?"} 
+            {"Don't have an account?"}
           </Text>
           <Pressable onPress={() => router.push('/(auth)/signup')}>
             <Text className="font-semibold text-emerald-500"> Sign up</Text>
