@@ -1,19 +1,19 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
-import { View, FlatList, Dimensions } from "react-native";
-import { useRouter } from "expo-router";
-import OnboardingScreen from "@/app/(onboarding)/index";
-import OnboardingScreen2 from "@/app/(onboarding)/onboardingScreen2";
-import OnboardingScreen3 from "@/app/(onboarding)/onboardingScreen3";
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { View, FlatList, Dimensions } from 'react-native';
+import { useRouter } from 'expo-router';
+import OnboardingScreen from '@/app/(onboarding)/index';
+import OnboardingScreen2 from '@/app/(onboarding)/onboardingScreen2';
+import OnboardingScreen3 from '@/app/(onboarding)/onboardingScreen3';
 
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get('window');
 
 export default function OnboardingCarousel() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  const goToSignIn = () => router.replace("/(auth)/signIn");
-  const gotoSignup = () => router.replace("/(auth)/signup");
+  const goToSignIn = () => router.replace('/(auth)/signIn');
+  const gotoSignup = () => router.replace('/(auth)/signup');
 
   type ScreenProps = {
     onNext: () => void;
@@ -26,15 +26,15 @@ export default function OnboardingCarousel() {
 
   const screens = [
     {
-      key: "1",
+      key: '1',
       component: (props: ScreenProps) => <OnboardingScreen {...props} />,
     },
     {
-      key: "2",
+      key: '2',
       component: (props: ScreenProps) => <OnboardingScreen2 {...props} />,
     },
     {
-      key: "3",
+      key: '3',
       component: (props: ScreenProps) => <OnboardingScreen3 {...props} />,
     },
   ];
@@ -45,10 +45,10 @@ export default function OnboardingCarousel() {
         flatListRef.current?.scrollToIndex({ index, animated: true });
         setCurrentIndex(index);
       } else {
-        router.replace("/(auth)/signIn");
+        router.replace('/(auth)/signIn');
       }
     },
-    [screens.length, router]
+    [screens.length, router],
   );
 
   useEffect(() => {
@@ -62,6 +62,7 @@ export default function OnboardingCarousel() {
     // no timer on the last screen, so no advancement
     return undefined;
   }, [currentIndex, goToNext, screens.length]);
+
 
   return (
     <View className="items-center justify-center flex-1">

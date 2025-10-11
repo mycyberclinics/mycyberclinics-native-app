@@ -16,7 +16,7 @@ LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
-  const setInitializing = useAuthStore((s) => s.setInitializing); // ⭐ NEW
+  const setInitializing = useAuthStore((s) => s.setInitializing); 
 
   useEffect(() => {
     // In dummy mode, we "finish" auth initialization immediately.
@@ -60,12 +60,13 @@ function ThemedLayout({ colorScheme }: { colorScheme: 'light' | 'dark' | null | 
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <QueryProvider>
         <AuthProvider>
-          <DebugBanner /> {/* ⭐ NEW */}
+          <DebugBanner />{' '}
+          {/* ⭐ handles the info at the top of the screen - just debugging issues */}
           <Stack
             screenOptions={{
               headerShown: false,
               contentStyle: {
-                backgroundColor: isDark ? '#0B0E11' : '#f5f5f5',
+                backgroundColor: isDark ? '#0B0E11' : '#F5F5F5',
               },
             }}
           />
