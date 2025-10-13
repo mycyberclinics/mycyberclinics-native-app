@@ -57,6 +57,7 @@ module.exports = {
         boxShadow: {
           'green-soft': '0 4px 10px rgba(30, 210, 138, 0.1)',
         },
+        bodyBG: '#0B0E11'
       },
     },
   },

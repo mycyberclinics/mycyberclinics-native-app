@@ -1,13 +1,14 @@
 module.exports = {
   root: true,
-  extends: ["universe/native", "plugin:react-hooks/recommended", "prettier"],
+  extends: ['universe/native', 'plugin:react-hooks/recommended', 'prettier'],
   settings: {
-    "import/resolver": {
+    'import/resolver': {
       typescript: {},
     },
   },
   rules: {
-    "react-hooks/rules-of-hooks": "error",
-    "react-hooks/exhaustive-deps": "warn",
+    'react-hooks/rules-of-hooks': 'error',
+    'react-hooks/exhaustive-deps': 'warn',
+    'react/jsx-no-literals': ['warn', { noStrings: true }],
   },
 };

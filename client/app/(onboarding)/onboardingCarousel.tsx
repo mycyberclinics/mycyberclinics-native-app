@@ -13,7 +13,7 @@ export default function OnboardingCarousel() {
   const flatListRef = useRef<FlatList>(null);
 
   const goToSignIn = () => router.replace('/(auth)/signIn');
-  const gotoSignup = () => router.replace('/(auth)/signup');
+  const gotoSignup = () => router.replace('/(auth)/signup/emailPassword');
 
   type ScreenProps = {
     onNext: () => void;
@@ -63,9 +63,8 @@ export default function OnboardingCarousel() {
     return undefined;
   }, [currentIndex, goToNext, screens.length]);
 
-
   return (
-    <View className="items-center justify-center flex-1">
+    <View className="flex-1 items-center justify-center">
       <FlatList
         ref={flatListRef}
         data={screens}

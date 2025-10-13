@@ -49,7 +49,7 @@ export default function SignInScreen() {
       const user = useAuthStore.getState().user;
       if (user) {
         try {
-          await fetchProfile(); // <-- backend upsert after login
+          await fetchProfile();
         } catch (err) {
           console.error('[SignIn] Backend profile fetch failed:', err);
         }
@@ -60,36 +60,29 @@ export default function SignInScreen() {
     }
   };
 
-  // const onGuest = async () => {
-  //   await signIn('guest@mycyberclinics.com', 'guest-pass');
-  //   const user = useAuthStore.getState().user;
-  //   if (user) {
-  //     try {
-  //       await fetchProfile();
-  //     } catch (err) {
-  //       console.error('[SignIn] Backend profile fetch failed:', err);
-  //     }
-  //     router.replace('/(main)/home');
-  //   }
-  // };
-
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-      <View className={`flex-1 justify-start  px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}>
-        {/* Back button */}
-        <View className="items-start justify-center gap-4 ">
-          <Pressable
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace('/(onboarding)/onboardingScreen3');
-              }
-            }}
-            className={` ${isDark ? 'border-misc-arrowBorder' : '#9CA3AF'} flex h-[40px] w-[40px] items-center justify-center rounded-full ${isDark ? 'border' : 'none'} ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'} `}
-          >
-            <Feather name="arrow-left" size={22} color={isDark ? '#fff' : '#111827'} />
-          </Pressable>
+      <View
+        className={`h-auto w-full flex-1 justify-between  px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
+      >
+        <View className='flex flex-col justify-center gap-6 items center'>
+          {/* Back button */}
+          <View className="mt-8">
+            <Pressable
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(onboarding)/onboardingScreen3');
+                }
+              }}
+              className={`flex h-[40px] w-[40px] items-center justify-center rounded-full ${
+                isDark ? 'border border-[#2F343A] bg-[#15191E]' : 'bg-[#F3F4F6]'
+              }`}
+            >
+              <Feather name="arrow-left" size={22} color={isDark ? '#fff' : '#111827'} />
+            </Pressable>
+          </View>
 
           {/* Header */}
           <View className="h-auto w-[328px] items-start justify-center gap-2 ">
@@ -101,13 +94,13 @@ export default function SignInScreen() {
             <Text
               className={`h-[20px] w-full text-[14px] font-[400] leading-6  ${isDark ? 'text-text-secondaryDark' : 'text-text-secondaryLight'}`}
             >
-              Login to continue enjoy cyberclinic
+              Login to continue to enjoy cyberclinic
             </Text>
           </View>
 
           {/* Email */}
           <Text
-            className={`h-[20px] w-[34px] text-[14px] font-[500] leading-6  ${isDark ? 'text-text-primaryDark' : 'text-text-textInverse'} `}
+            className={`h-[20px] w-[34px] text-[14px] font-[500]  ${isDark ? 'text-text-primaryDark' : 'text-text-textInverse'} `}
           >
             Email
           </Text>
@@ -157,7 +150,7 @@ export default function SignInScreen() {
             Password
           </Text>
           <View
-            className={`h-[40px] w-full flex-row items-center rounded-[4px] border px-[12px] ${
+            className={`h-[40px] w-full flex-row items-center justify-center rounded-[4px] border px-[12px] ${
               focusedField === 'password'
                 ? 'border-[#1ED28A]'
                 : isDark
@@ -211,37 +204,41 @@ export default function SignInScreen() {
           </View>
         </View>
 
-        {/* Sign in button */}
-        <TouchableOpacity
-          disabled={isSubmitting}
-          onPress={handleSubmit(onSubmit)}
-          className={`rounded-full py-3 ${isDark ? 'border-button-signInButtonBorderDark' : 'border-button-signInButtonBorderLight'} ${
-            agreed
-              ? 'bg-button-buttonBG'
-              : isDark
+        <View className="items-center justify-center gap-6 mb-10 ">
+          {/* Sign in button */}
+          <TouchableOpacity
+            disabled={isSubmitting}
+            onPress={handleSubmit(onSubmit)}
+            className={`flex h-[48px] w-[328px] items-center justify-center rounded-full py-3 ${isDark ? 'border-button-signInButtonBorderDark' : 'border-button-signInButtonBorderLight'} ${
+              agreed
                 ? 'bg-button-buttonBG'
-                : 'bg-button-buttonBGLight'
-          }`}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text
-              className={`text-center font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}
-            >
-              Sign in
-            </Text>
-          )}
-        </TouchableOpacity>
+                : isDark
+                  ? 'bg-button-buttonBG'
+                  : 'bg-button-buttonBGLight'
+            }`}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text
+                className={`text-center text-[14px] font-[500]  ${isDark ? 'text-text-textInverse' : 'text-text-secondaryTextDark'}`}
+              >
+                Sign in
+              </Text>
+            )}
+          </TouchableOpacity>
 
-        {/* Sign up link */}
-        <View className="flex-row justify-center mt-6 mb-10">
-          <Text className={isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'}>
-            {"Don't have an account?"}
-          </Text>
-          <Pressable onPress={() => router.push('/(auth)/signup')}>
-            <Text className="font-semibold text-emerald-500"> Sign up</Text>
-          </Pressable>
+          {/* Sign up link */}
+          <View className="flex-row justify-center mx-auto ">
+            <Text
+              className={`text-[14px] font-[500]  ${isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'}`}
+            >
+              {"Don't have an account?"}
+            </Text>
+            <Pressable onPress={() => router.push('/(auth)/signup/emailPassword')}>
+              <Text className="text-[14px] font-[500]  text-emerald-500"> Sign up</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </ScrollView>

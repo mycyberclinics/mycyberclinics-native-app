@@ -21,11 +21,11 @@ export default function Home() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center gap-8 bg-white">
+    <View className="items-center justify-center flex-1 gap-8 bg-white">
       <View className="w-full ">
-        <Text className="w-full text-center text-2xl "> WELCOME TO MY DASHBOARD 🎉</Text>
+        <Text className="w-full text-2xl text-center "> WELCOME TO MY DASHBOARD 🎉</Text>
       </View>
-      <TouchableOpacity onPress={fetchProfile} className="mb-4 rounded-lg bg-emerald-500 px-6 py-3">
+      <TouchableOpacity onPress={fetchProfile} className="px-6 py-3 mb-4 rounded-lg bg-emerald-500">
         <Text className="font-semibold text-white">Fetch Profile</Text>
       </TouchableOpacity>
 

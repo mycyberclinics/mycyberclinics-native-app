@@ -1,34 +1,27 @@
 import React from 'react';
-import { Stack, Redirect, usePathname } from 'expo-router';
+import { Redirect, Slot } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
+import { View, ActivityIndicator } from 'react-native';
 
 export default function AuthLayout() {
-  const { user, initializing } = useAuthStore();
-  const pathname = usePathname();
+  const { user, initializing, onboarding } = useAuthStore();
 
-  // Debug log
-  console.log('[AuthLayout]', { initializing, pathname, user });
+  console.log('[AuthLayout]', { initializing, onboarding, user });
 
   if (initializing) {
-    return null;
+    return (
+      <View className="items-center justify-center flex-1 bg-white">
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
-  if (user) {
+  // 🟡 Only redirect to /home when not onboarding
+  if (user && !onboarding) {
     console.log('[AuthLayout] redirecting verified user to main/home');
-    return <Redirect href="/(main)/home" />;
+    return <Redirect href="/home" />;
   }
 
-  //use later ⚡⚡⚡⚡⚡
-
-  // if (user) {
-  //   if (pathname !== '/(auth)/verifyEmail') {
-  //     console.log('[AuthLayout] redirecting unverified user to verifyEmail');
-  //     return <Redirect href="/(auth)/verifyEmail" />;
-  //   }
-  //   console.log('[AuthLayout] already on verifyEmail, rendering stack');
-  //   return <Stack screenOptions={{ headerShown: false }} />;
-  // }
-
-  console.log('[AuthLayout] no user, rendering auth stack');
-  return <Stack screenOptions={{ headerShown: false }} />;
+  console.log('[AuthLayout] user is still onboarding or unauthenticated, render auth stack');
+  return <Slot />;
 }
