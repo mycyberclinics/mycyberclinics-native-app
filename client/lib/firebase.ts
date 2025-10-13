@@ -1,3 +1,4 @@
+//there is no persistence, meaning users gets logged out on app refresh 
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 
@@ -20,4 +21,8 @@ export function getFirebaseAuth(): Auth {
     authInstance = getAuth(app);
   }
   return authInstance;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 7702349103e189d416663b034e1f6b1acb004c3b

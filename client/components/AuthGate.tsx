@@ -1,22 +1,31 @@
 import React from 'react';
 import { Redirect, Slot } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
+import { View, ActivityIndicator } from 'react-native';
 
 export default function AuthGate() {
-  const { user, initializing } = useAuthStore();
+  const { user, initializing, tempEmail } = useAuthStore();
+  const href = '/(auth)/verifyEmail' as const;
 
-  // while firebase checks the cached session
+  console.log('AuthGate render', { user, initializing, tempEmail });
+
   if (initializing) {
-    return null; // could render a small loader later
+    return (
+      <View className="items-center justify-center flex-1 bg-white">
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
-  // decide what to show
-  if (!user) {
-    // no user → this goes to signIn stack
+  // ✅ If user is null but tempEmail exists, user is onboarding
+  if (!user && !tempEmail) {
     return <Redirect href="/(auth)/signIn" />;
   }
 
-    // logged-in → render whatever route sits inside (main)
-    // Slot is expo's placeholder guy for nested routes 
+  // when verification email is implemented
+  // if (user && !user.emailVerified) {
+  //   return <Redirect href={href} />;
+  // }
+
   return <Slot />;
 }

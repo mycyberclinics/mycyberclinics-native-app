@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import '@/i18n';
 import { Stack } from 'expo-router';
 import '../global.css';
@@ -7,7 +7,7 @@ import { useColorScheme, LogBox, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
-import { useAuthStore } from '@/store/auth';
+// import { useAuthStore } from '@/store/auth';
 import DebugBanner from '@/components/DebuggerBanner';
 
 // ignore Expo Router's internal warning
@@ -16,13 +16,13 @@ LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
-  const setInitializing = useAuthStore((s) => s.setInitializing); // ⭐ NEW
+  // const setInitializing = useAuthStore((s) => s.setInitializing);
 
-  useEffect(() => {
-    // In dummy mode, we "finish" auth initialization immediately.
-    // (When we switch to Firebase, AuthProvider will handle this.)
-    setInitializing(false); // ⭐ NEW
-  }, [setInitializing]);
+  // useEffect(() => {
+  //   // In dummy mode, we "finish" auth initialization immediately.
+  //   // (When we switch to Firebase, AuthProvider will handle this.)
+  //   setInitializing(false); // ⭐ NEW
+  // }, [setInitializing]);
 
   // useEffect(() => {
   //   const prepare = async () => {
@@ -60,12 +60,13 @@ function ThemedLayout({ colorScheme }: { colorScheme: 'light' | 'dark' | null | 
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <QueryProvider>
         <AuthProvider>
-          <DebugBanner /> {/* ⭐ NEW */}
+          <DebugBanner />
+          {/* ⭐ handles the info at the top of the screen - just debugging issues */}
           <Stack
             screenOptions={{
               headerShown: false,
               contentStyle: {
-                backgroundColor: isDark ? '#0B0E11' : '#f5f5f5',
+                backgroundColor: isDark ? '#0B0E11' : '#F5F5F5',
               },
             }}
           />
