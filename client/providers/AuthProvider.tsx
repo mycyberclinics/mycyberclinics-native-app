@@ -34,7 +34,6 @@
 // }
 
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useAuthStore } from '@/store/auth';
 
@@ -43,29 +42,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setInitializing = useAuthStore((s) => s.setInitializing);
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+    const auth = getFirebaseAuth();
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+        });
+      } else {
+        setUser(null);
+      }
+      setInitializing(false);
+    });
 
-    // Async IIFE for awaiting getFirebaseAuth
-    (async () => {
-      const auth = await getFirebaseAuth();
-
-      unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-        if (firebaseUser) {
-          const simplifiedUser = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email || '',
-          };
-          setUser(simplifiedUser);
-        } else {
-          setUser(null);
-        }
-        setInitializing(false);
-      });
-    })();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    return () => unsubscribe();
   }, [setUser, setInitializing]);
 
   return <>{children}</>;

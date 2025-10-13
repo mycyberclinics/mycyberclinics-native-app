@@ -13,8 +13,10 @@ if (!projectId || !clientEmail || !privateKey) {
   );
 }
 
-// If the key was stored with literal '\n' sequences, convert them. Also strip surrounding quotes.
-privateKey = privateKey.replace(/\\n/g, "\n").replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+privateKey = privateKey
+  .replace(/\\n/g, "\n")
+  .replace(/^"(.*)"$/, "$1")
+  .replace(/^'(.*)'$/, "$1");
 
 admin.initializeApp({
   credential: admin.credential.cert({

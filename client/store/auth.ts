@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signIn: async (email, password) => {
     try {
       set({ loading: true, error: null });
-      const auth = await getFirebaseAuth();
+      const auth = getFirebaseAuth();
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const { uid, email: em } = cred.user;
       set({ user: { id: uid, email: em || '' }, loading: false });
@@ -46,7 +46,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUp: async (email, password) => {
     try {
       set({ loading: true, error: null });
-      const auth = await getFirebaseAuth();
+      const auth = getFirebaseAuth();
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const { uid, email: em } = cred.user;
       set({ user: { id: uid, email: em || '' }, loading: false });
@@ -57,7 +57,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     try {
-      const auth = await getFirebaseAuth();
+      const auth = getFirebaseAuth();
       await fbSignOut(auth);
       set({ user: null });
     } catch (err) {
