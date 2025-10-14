@@ -3,7 +3,9 @@ import admin from "../firebase";
 import User from "../models/User";
 
 export default async function firebaseAuth(ctx: Context, next: Next) {
-  const authHeader = ctx.headers.authorization;
+  const authHeader = ctx.headers.authorization || ctx.request.header.authorization;
+  console.log("AUTH HEADERS:", ctx.headers); // Debug: See incoming headers
+
   if (!authHeader) {
     ctx.status = 401;
     ctx.body = { error: "No Authorization header" };

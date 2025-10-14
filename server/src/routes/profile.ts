@@ -1,7 +1,7 @@
 import Router from "koa-router";
 import firebaseAuth from "../middleware/auth";
 import User, { IUser } from "../models/User";
-import { uploadToS3 } from "../utils/s3";
+import { uploadToFirebaseStorage } from "../utils/firebaseStorage";
 import koaBody from "koa-body";
 
 const router = new Router();
@@ -61,10 +61,10 @@ router.post("/api/profile/upload-doc", firebaseAuth, koaBody({ multipart: true }
 
   let mcdnLicenseUrl, additionalQualificationUrl;
   if (files?.mcdnLicense) {
-    mcdnLicenseUrl = await uploadToS3(files.mcdnLicense, `mcdnLicense/${user.uid}`);
+    mcdnLicenseUrl = await uploadToFirebaseStorage(files.mcdnLicense, "mcdnLicense", user.uid);
   }
   if (files?.additionalQualification) {
-    additionalQualificationUrl = await uploadToS3(files.additionalQualification, `additionalQualification/${user.uid}`);
+    additionalQualificationUrl = await uploadToFirebaseStorage(files.additionalQualification, "additionalQualification", user.uid);
   }
 
   user.mcdnLicense = mcdnLicenseUrl || user.mcdnLicense;

@@ -45,3 +45,11 @@ app-example
 # Generated native folders
 /ios
 /android
+
+# Firebase files & folders
+/functions
+.firebaserc
+firebase.json
+firestore.indexes.json
+firestore.rules
+storage.rules
