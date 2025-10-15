@@ -1,7 +1,16 @@
-import React from "react";
-import { View, Text, Image, Pressable, useColorScheme } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { LinearGradient } from "expo-linear-gradient";
+import React from 'react';
+import {
+  View,
+  Text,
+  Image,
+  Pressable,
+  useColorScheme,
+  Platform,
+  useWindowDimensions,
+  ScrollView,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type ScreenProps = {
   onNext: () => void;
@@ -19,124 +28,142 @@ export default function OnboardingScreen({
   totalScreens,
 }: ScreenProps) {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = colorScheme === 'dark';
+  const { width } = useWindowDimensions();
 
   const gradientColors =
-    colorScheme === "dark"
-      ? (["rgba(0,0,0,0.95)", "rgba(0,0,0,0.7)", "transparent"] as const)
-      : ([
-          "rgba(255,255,255,0.9)",
-          "rgba(255,255,255,0.6)",
-          "transparent",
-        ] as const);
+    colorScheme === 'dark'
+      ? (['rgba(0,0,0,0.95)', 'rgba(0,0,0,0.7)', 'transparent'] as const)
+      : (['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.6)', 'transparent'] as const);
 
   return (
-    <View
-      className={`flex flex-col items-center justify-center flex-1 px-6 w-[360px] h-auto mx-auto ${isDark ? "bg-[#0B0E11]" : "bg-transparent"} `}
+    <ScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: Platform.OS === 'web' ? 60 : 20,
+      }}
     >
-      <StatusBar style={isDark ? "light" : "dark"} />
+      <View
+        className={` mb-10 flex flex-1 flex-col items-center justify-center px-6 ${
+          isDark ? 'bg-[#0B0E11]' : 'bg-transparent'
+        }`}
+        style={{
+          width: '100%',
+          maxWidth: 480,
+          alignSelf: 'center',
+        }}
+      >
+        <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      <View className="flex-row items-center justify-between mt-6 w-[328px] h-[20px] ">
-        <View className="flex-row items-center gap-1 w-[52px] h-[4px]">
-          {Array.from({ length: totalScreens }).map((_, i) => (
-            <View
-              key={i}
-              className={`w-[20px] h-[4px] rounded-[40px] ${
-                i === currentIndex
-                  ? "bg-button-buttonBG"
-                  : isDark
-                    ? "bg-button-buttonDisabledBG"
-                    : "bg-button-buttonLight"
+        <View
+          className={` w-full max-w-[328px] flex-row items-center justify-between ${isDark ? 'bg-transparent' : 'bg-transparent'}`}
+        >
+          <View className="flex-row items-center gap-1">
+            {Array.from({ length: totalScreens }).map((_, i) => (
+              <View
+                key={i}
+                className={`h-[4px] w-[20px] rounded-[40px] ${
+                  i === currentIndex
+                    ? 'bg-button-buttonBG'
+                    : isDark
+                      ? 'bg-button-buttonDisabledBG'
+                      : 'bg-button-buttonLight'
+                }`}
+              />
+            ))}
+          </View>
+
+          <Pressable onPress={onSkip}>
+            <Text
+              className={`text-sm font-semibold ${
+                isDark ? 'text-text-accentDark' : 'text-text-accentLight'
               }`}
-            />
-          ))}
+            >
+              Skip
+            </Text>
+          </Pressable>
         </View>
 
-        <Pressable onPress={onSkip}>
-          <Text
-            className={`text-sm font-semibold ${
-              isDark ? "text-text-accentDark" : "text-text-accentLight "
-            }`}
-          >
-            Skip
-          </Text>
-        </Pressable>
-      </View>
-
-      <View className="flex-col items-center justify-center w-[328px] h-[326px] ">
-        <Image
-          source={require("@/assets/images/onboarding1.png")}
-          className="relative"
-        />
-        <View className="">
+        <View className="mt-16 h-auto w-full max-w-[328px] flex-col items-center justify-center">
+          <Image
+            source={require('@/assets/images/onboarding1.png')}
+            className="relative h-[250px] w-[250px] object-contain"
+            resizeMode="contain"
+          />
           <LinearGradient
             colors={gradientColors}
             start={{ x: 0.5, y: 1 }}
             end={{ x: 0.5, y: 0 }}
-            className="absolute bottom-[100%] left-[-38%] w-[253px] h-[100px]  "
+            className="absolute bottom-[0%] left-[0] h-[100px] w-full "
+          />
+          <Image
+            source={require('@/assets/images/onboarding2.png')}
+            className="absolute bottom-[-42%] left-[50%]"
+            resizeMode="contain"
           />
         </View>
-        <Image
-          source={require("@/assets/images/onboarding2.png")}
-          className="absolute bottom-[-23%] left-[50%] overflow-auto "
-        />
-      </View>
 
-      <View className="flex flex-col items-center justify-center mt-12 w-[328px] h-auto gap-[34px] py-4  ">
-        <View className="flex flex-col items-center justify-center ">
-          <Text
-            className={`w-[263px] text-[32px] tex-center font-bold text-center ${
-              isDark ? "text-text-primaryDark" : "text-text-primaryLight"
-            }`}
-          >
-            Get Healthcare,{"\n"}Wherever You Are
-          </Text>
-          <Text
-            className={`w-[328px] text-[16px] text-center mt-3 leading-5 ${
-              isDark ? "text-text-secondaryDark" : "text-text-secondaryLight"
-            }`}
-          >
-            Licensed doctors and specialists are just a tap away, from the
-            comfort of your home.
-          </Text>
-        </View>
-
-        <View className="flex flex-col gap-6 w-[328px] mb-6 space-y-4  w-mt-auto">
-          <Pressable
-            onPress={onNext}
-            className="py-4 rounded-full bg-button-buttonBG active:opacity-80 "
-          >
+        <View className="mt-14 flex w-full max-w-[328px] flex-col items-center justify-center gap-[34px] py-4">
+          <View className="flex flex-col items-center justify-center">
             <Text
-              className={`text-center font-semibold text-base ${
-                isDark
-                  ? "text-text-textInverse"
-                  : "text-text-buttonSecondaryTextLight"
+              className={`text-center text-[28px] font-bold md:text-[32px] ${
+                isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
               }`}
             >
-              Continue
+              Get Healthcare,{'\n'}Wherever You Are
             </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={onSignIn}
-            className={`rounded-full py-4 ${
-              isDark
-                ? "bg-button-buttonSecondaryDark"
-                : "bg-button-buttonSecondaryLight"
-            } active:opacity-80`}
-          >
             <Text
-              className={`text-center font-semibold text-base ${
-                isDark
-                  ? "text-text-buttonSecondaryText"
-                  : "text-text-buttonSecondaryText"
+              className={`mt-3 text-center text-[16px] leading-5 ${
+                isDark ? 'text-text-secondaryDark' : 'text-text-secondaryLight'
               }`}
+              style={{
+                maxWidth: 340,
+              }}
             >
-              Sign In
+              Licensed doctors and specialists are just a tap away, from the comfort of your home.
             </Text>
-          </Pressable>
+          </View>
+
+          <View className=" flex w-full max-w-[328px] flex-col gap-6">
+            <Pressable
+              onPress={onNext}
+              className="py-4 rounded-full bg-button-buttonBG active:opacity-80"
+              style={{
+                minWidth: width > 480 ? 300 : '100%',
+              }}
+            >
+              <Text
+                className={`text-center text-base font-semibold ${
+                  isDark ? 'text-text-textInverse' : 'text-text-buttonSecondaryTextLight'
+                }`}
+              >
+                Continue
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={onSignIn}
+              className={`rounded-full py-4 ${
+                isDark ? 'bg-button-buttonSecondaryDark' : 'bg-button-buttonSecondaryLight'
+              } active:opacity-80`}
+              style={{
+                minWidth: width > 480 ? 300 : '100%',
+                backgroundColor: '#D1FAE5',
+              }}
+            >
+              <Text
+                className={`text-center text-base font-semibold ${
+                  isDark ? 'text-text-buttonSecondaryText' : 'text-text-buttonSecondaryText'
+                }`}
+              >
+                Sign In
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }

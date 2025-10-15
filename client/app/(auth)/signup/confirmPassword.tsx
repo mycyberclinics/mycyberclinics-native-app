@@ -15,34 +15,38 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
+import { getFirebaseAuth } from '@/lib/firebase';
+import { sendEmailVerification } from 'firebase/auth';
+import { SignupFormSchema } from '@/lib/schemas/user';
+import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 
-// Schema: confirmPassword must match password password auto-filled from previous screen
-const Step3Schema = z
-  .object({
-    email: z.email('Invalid email address'),
-    password: z
-      .string()
-      .min(8, 'Must be at least 8 characters')
-      .refine((v) => /[A-Z]/.test(v), 'Must contain uppercase letter')
-      .refine((v) => /[a-z]/.test(v), 'Must contain lowercase letter')
-      .refine((v) => /[0-9]/.test(v), 'Must contain number')
-      .refine((v) => /[^A-Za-z0-9]/.test(v), 'Must contain special character'),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    path: ['confirmPassword'],
-    message: 'Oooops! Sorry passwords do not match! 🚫',
-  });
+// Use Hosting domain when ready. .env has the link btw
+const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
+  url: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN_DYNAMIC_LINK as string,
+  handleCodeInApp: true,
+  iOS: { bundleId: 'com.mycyberclinics.app' },
+  android: { packageName: 'com.mycyberclinics.app', installApp: true },
+};
+
+// confirmPassword must match password; password auto-filled from previous screen
+const Step3Schema = SignupFormSchema.extend({
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
+}).refine((data) => data.password === data.confirmPassword, {
+  path: ['confirmPassword'],
+  message: 'Oooops! Passwords do not match!',
+});
 
 type FormValues = z.infer<typeof Step3Schema>;
 
 export default function ConfirmPasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  useTrackOnboardingStep();
 
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
+
   const { tempEmail, tempPassword, setTempPassword, loading } = useAuthStore();
 
   const {
@@ -59,15 +63,31 @@ export default function ConfirmPasswordScreen() {
     },
   });
 
-  // Ensure email and temp password prefill
+  // Prefill email and temp password
   useEffect(() => {
     if (tempEmail) setValue('email', tempEmail);
     if (tempPassword) setValue('password', tempPassword);
   }, [tempEmail, tempPassword, setValue]);
 
   // When confirmed password is submitted, this should save it as the real password
-  const onSubmit = (data: FormValues) => {
+  // and trigger email verification link
+  const onSubmit = async (data: FormValues) => {
     setTempPassword(data.confirmPassword);
+
+    try {
+      const auth = getFirebaseAuth();
+      const current = auth.currentUser;
+
+      if (current) {
+        await sendEmailVerification(current, actionCodeSettings);
+        console.log('[ConfirmPassword] Verification email requested');
+      } else {
+        console.warn('[ConfirmPassword] No current user to send verification to');
+      }
+    } catch (err) {
+      console.error('[ConfirmPassword] sendEmailVerification error', err);
+    }
+
     router.push('/(auth)/signup/verifyEmail');
   };
 
@@ -121,7 +141,6 @@ export default function ConfirmPasswordScreen() {
             </Text>
           </View>
 
-          {/* Email */}
           <Text
             className={`mb-3 mt-6 text-[14px] font-[500] ${
               isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
@@ -156,7 +175,6 @@ export default function ConfirmPasswordScreen() {
             />
           </View>
 
-          {/* Temp Password (readonly just for confirmation visual) */}
           <View className="mt-6">
             <Text
               className={`mb-3 text-[14px] font-[500] ${
@@ -192,7 +210,6 @@ export default function ConfirmPasswordScreen() {
             </View>
           </View>
 
-          {/* Re-enter Password (actual password to store) */}
           <View className="mt-6">
             <Text
               className={`mb-3 text-[14px] font-[500] ${
@@ -237,7 +254,6 @@ export default function ConfirmPasswordScreen() {
           </View>
         </View>
       </View>
-
 
       <View className="items-center justify-center gap-6 mb-10">
         <View className="items-center">

@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import '@/i18n';
 import { Stack } from 'expo-router';
 import '../global.css';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme, LogBox, View } from 'react-native';
+import { useColorScheme, LogBox, View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
-// import { useAuthStore } from '@/store/auth';
+import { useAuthStore } from '@/store/auth';
 import DebugBanner from '@/components/DebuggerBanner';
 
 // ignore Expo Router's internal warning
@@ -15,26 +15,6 @@ LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-
-  // const setInitializing = useAuthStore((s) => s.setInitializing);
-
-  // useEffect(() => {
-  //   // In dummy mode, we "finish" auth initialization immediately.
-  //   // (When we switch to Firebase, AuthProvider will handle this.)
-  //   setInitializing(false); // ⭐ NEW
-  // }, [setInitializing]);
-
-  // useEffect(() => {
-  //   const prepare = async () => {
-  //     try {
-  //       await SplashScreen.preventAutoHideAsync();
-  //       await new Promise((r) => setTimeout(r, 1000));
-  //     } finally {
-  //       await SplashScreen.hideAsync();
-  //     }
-  //   };
-  //   prepare();
-  // }, []);
 
   return (
     <SafeAreaProvider>
@@ -46,6 +26,22 @@ export default function RootLayout() {
 function ThemedLayout({ colorScheme }: { colorScheme: 'light' | 'dark' | null | undefined }) {
   const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
+  const { initializing, rehydrate } = useAuthStore();
+
+  // rehydrate once on mount
+  useEffect(() => {
+    rehydrate();
+  }, []);
+
+  if (initializing) {
+    return (
+      <View
+        className={`flex-1 items-center justify-center ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
+      >
+        <ActivityIndicator size="large" color="#1ED28A" />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -61,12 +57,11 @@ function ThemedLayout({ colorScheme }: { colorScheme: 'light' | 'dark' | null | 
       <QueryProvider>
         <AuthProvider>
           <DebugBanner />
-          {/* ⭐ handles the info at the top of the screen - just debugging issues */}
           <Stack
             screenOptions={{
               headerShown: false,
               contentStyle: {
-                backgroundColor: isDark ? '#0B0E11' : '#F5F5F5',
+                backgroundColor: isDark ? '#0B0E11' : '#FFFFFF',
               },
             }}
           />

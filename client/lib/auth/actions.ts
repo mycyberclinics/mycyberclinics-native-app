@@ -1,4 +1,5 @@
-// client/lib/auth/actions.ts
+// this file needs to go
+
 import { signInAnonymously } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import api from '@/lib/api/client';

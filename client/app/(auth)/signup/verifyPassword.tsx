@@ -24,6 +24,7 @@ import Animated, {
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
+import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 
 const Step2Schema = z.object({
   email: z.string().email('Invalid email address'),
@@ -91,6 +92,7 @@ export default function Step2Screen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
+  useTrackOnboardingStep();
 
   const { tempEmail, setTempPassword, loading } = useAuthStore();
 
@@ -124,7 +126,7 @@ export default function Step2Screen() {
   }, [password]);
 
   const passedCount = checks.filter((c) => c.valid).length;
-  const strengthValue = passedCount / checks.length; 
+  const strengthValue = passedCount / checks.length;
 
   const strengthMeta = useMemo(() => {
     if (passedCount <= 2) return { label: 'Too Weak', color: '#EF4444' };
@@ -135,6 +137,7 @@ export default function Step2Screen() {
   const strengthOpacity = useSharedValue(0);
   const strengthScale = useSharedValue(1);
 
+  // effects for password strength 
   useEffect(() => {
     // fade in
     strengthOpacity.value = 0;

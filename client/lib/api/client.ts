@@ -1,40 +1,35 @@
 import axios from 'axios';
-import { apiBaseUrl } from './apiConfig'; // <-- import the helper
 import { getFirebaseAuth } from '@/lib/firebase';
 import * as SecureStore from 'expo-secure-store';
+import { BackendUserSchema } from '@/lib/schemas/user';
 
 const TOKEN_KEY = 'mc_firebase_id_token';
 
 const api = axios.create({
-  baseURL: apiBaseUrl, // <-- use the config value here!
+  baseURL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000',
   timeout: 15000,
 });
 
-// Axios request interceptor: Always await getFirebaseAuth() before accessing currentUser!
+// attach Firebase ID token to request payload
 api.interceptors.request.use(async (config) => {
   config.headers = config.headers || {};
 
-  const auth = await getFirebaseAuth();
-  const user = auth.currentUser;
-  if (user) {
-    try {
+  try {
+    const auth = getFirebaseAuth();
+    const user = auth.currentUser;
+
+    if (user) {
       const token = await user.getIdToken();
       config.headers.Authorization = `Bearer ${token}`;
       return config;
-    } catch (err) {
-      console.warn('[API] Token fetch from currentUser failed:', err);
-      // fallthrough to SecureStore
     }
-  }
 
-  // Fallback: SecureStore
-  try {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (storedToken) {
+      config.headers.Authorization = `Bearer ${storedToken}`;
     }
   } catch (err) {
-    console.warn('[API] SecureStore token read failed:', err);
+    console.warn('[API] Token attach error:', err);
   }
 
   return config;
@@ -46,18 +41,19 @@ api.interceptors.response.use(
     console.error('[API] Error:', error?.message ?? error);
     if (error.response?.status === 401) {
       console.warn('[API] Unauthorized — clearing auth');
-      getFirebaseAuth().then((auth) => auth.signOut?.());
+      const auth = getFirebaseAuth();
+      auth.signOut?.();
     }
     return Promise.reject(error);
   },
 );
 
-/** Convenience API function for /api/profile */
 export async function fetchProfile() {
   try {
     const response = await api.get('/api/profile');
-    console.log('[API] profile:', response.data);
-    return response.data;
+    const user = BackendUserSchema.parse(response.data);
+    console.log('[API] profile parsed:', user);
+    return user;
   } catch (error) {
     console.error('[API] profile fetch failed', error);
     throw error;

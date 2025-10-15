@@ -8,7 +8,7 @@ export default async function firebaseAuth(ctx: Context, next: Next) {
 
   if (!authHeader) {
     ctx.status = 401;
-    ctx.body = { error: "No Authorization header" };
+    ctx.body = { error: "No Authorization header" }; 
     return;
   }
 

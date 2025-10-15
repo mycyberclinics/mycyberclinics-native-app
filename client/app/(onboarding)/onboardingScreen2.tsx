@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, Image, useColorScheme, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  useColorScheme,
+  Pressable,
+  useWindowDimensions,
+  Platform,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 type ScreenProps = {
@@ -19,15 +27,25 @@ export default function OnboardingScreen2({
 }: ScreenProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { width } = useWindowDimensions();
+
+  // ✅ Clamp content width so desktop doesn’t stretch layout
+  const maxWidth = Math.min(width, 480);
 
   return (
     <View
-      className={`mx-auto flex h-auto w-[360px] flex-1 flex-col items-center justify-center px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-transparent'}`}
+      className={`${isDark ? 'bg-[#0B0E11]' : 'bg-transparent'} flex-1 items-center justify-center px-6`}
+      style={{
+        width: '100%',
+        maxWidth,
+        alignSelf: 'center',
+      }}
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      <View className="mt-6 h-[20px] w-[328px] flex-row items-center justify-between ">
-        <View className="h-[4px] w-[52px] flex-row items-center gap-1">
+      {/* Progress + Skip */}
+      <View className=" h-[20px] w-full flex-row items-center justify-between">
+        <View className="h-[4px] flex-row items-center gap-1">
           {Array.from({ length: totalScreens }).map((_, i) => (
             <View
               key={i}
@@ -45,7 +63,7 @@ export default function OnboardingScreen2({
         <Pressable onPress={onSkip}>
           <Text
             className={`text-sm font-semibold ${
-              isDark ? 'text-text-accentDark' : 'text-text-accentLight '
+              isDark ? 'text-text-accentDark' : 'text-text-accentLight'
             }`}
           >
             Skip
@@ -53,39 +71,62 @@ export default function OnboardingScreen2({
         </Pressable>
       </View>
 
-      <View className="mx-auto mt-10 flex h-auto w-[312px] max-w-full flex-col items-center justify-center gap-2 ">
-        <View className="relative mx-auto w-full ">
-          <View className="absolute left-3 top-[60%] z-10 h-[66px] w-[288px] rounded-[12px] bg-misc-emptyView2"></View>
-          <View className="absolute left-1.5 top-[53%] z-20 h-[69px] w-[300px] rounded-[12px] bg-misc-emptyView1 "></View>
-          <View className="relative z-30 h-auto w-full">
-            <View className="absolute right-[5%] top-[-12%] z-40 h-[28px] w-[158px] rounded-[36px] border border-misc-borderColor bg-emerald-700 px-[6px] py-[4px]">
-              <Text className="text-text-primaryDark ">✨ Your AI Companion</Text>
+      {/* Chat + Chioma Section */}
+      <View className="relative mt-10 w-full max-w-[360px] flex-col items-center justify-center gap-4">
+        {/* Layered chat cards */}
+        <View className="relative items-center justify-center w-full">
+          {/* Layer shadows */}
+          <View className="absolute left-4 top-[58%] h-[66px] w-[336px] rounded-[12px] bg-misc-emptyView2" />
+          <View className="absolute left-1 top-[52%] h-[69px] w-[354px] rounded-[12px] bg-misc-emptyView1" />
+
+          {/* Chat card */}
+          <View
+            className={`relative z-30 flex w-full flex-row items-start justify-center gap-4 rounded-[12px] border px-4 py-8 ${
+              isDark
+                ? 'border-card-cardBG bg-button-buttonDisabledBG'
+                : 'border-card-cardBorder bg-card-cardBGLight'
+            }`}
+          >
+            <View className="flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-full bg-image-imageBG">
+              <Image
+                source={require('@/assets/images/chioma1.png')}
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 21,
+                  resizeMode: 'contain',
+                }}
+              />
             </View>
-            <View
-              className={`flex h-[132px] w-[312px] flex-row items-start justify-center gap-4  px-4 py-8 ${isDark ? 'bg-button-buttonDisabledBG' : 'bg-card-cardBGLight'} border ${isDark ? 'border-card-cardBG' : 'border-card-cardBorder'}  rounded-[12px] `}
+            <Text
+              className={`w-[244px] text-[14px] font-[400] leading-[20px] ${
+                isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
+              }`}
             >
-              <View className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-image-imageBG ">
-                <Image
-                  className="h-[39px] w-[23px] rounded-full "
-                  source={require('@/assets/images/chioma1.png')}
-                />
-              </View>
-              <Text
-                className={`${isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'} h-[80px] w-[244px] text-[14px] font-[400] leading-[20px] `}
-              >
-                Hi, I’m Chioma 👋, how are you feeling today? I can help you track your heart rate,
-                book appointments, or even answer your health questions.
-              </Text>
-            </View>
+              Hi, I’m Chioma 👋, how are you feeling today? I can help you track your heart rate,
+              book appointments, or even answer your health questions.
+            </Text>
+          </View>
+
+          {/* Tag */}
+          <View className="absolute right-[5%] top-[-14%] z-40 h-[28px] min-w-[158px] items-center justify-center rounded-[36px] border border-misc-borderColor bg-emerald-700 px-[6px] py-[4px]">
+            <Text className="text-[12px] font-semibold text-white">✨ Your AI Companion</Text>
           </View>
         </View>
-        <View className="mt-10 flex h-auto w-full flex-row items-center gap-2">
-          <View className="flex flex-1 flex-col items-end justify-center gap-6 px-0 ">
+
+        {/* Patient reply section */}
+        <View className="flex flex-row items-center justify-end w-full gap-2 mt-10">
+          <View className="flex flex-col items-end justify-center flex-1 gap-4">
             <Text
-              className={`h-[50px] w-[154px] rounded-bl-[12px] rounded-tl-[12px] rounded-tr-[12px] p-[16px] ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'} ${isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'} `}
+              className={`rounded-bl-[12px] rounded-tl-[12px] rounded-tr-[12px] p-[16px] ${
+                isDark
+                  ? 'bg-card-cardBG text-text-primaryDark'
+                  : 'bg-card-cardBGLight text-text-primaryLight'
+              }`}
             >
               Check my vitals 💓
             </Text>
+
             <Text
               style={{
                 shadowColor: 'rgba(30, 210, 138, 0.4)',
@@ -94,40 +135,48 @@ export default function OnboardingScreen2({
                 shadowRadius: 6,
                 elevation: 12,
               }}
-              className={`h-[51px] w-[210px] rounded-bl-[12px] rounded-br-[12px] rounded-tl-[12px] p-[16px] ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'} ${isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'} shadow-boxShadow-green-soft `}
+              className={`rounded-bl-[12px] rounded-br-[12px] rounded-tl-[12px] p-[16px] ${
+                isDark
+                  ? 'bg-card-cardBG text-text-primaryDark'
+                  : 'bg-card-cardBGLight text-text-primaryLight'
+              }`}
             >
               Remind me to take meds 💊
             </Text>
           </View>
-          <Image
-            className="h-[40px] w-[40px] rounded-full "
-            source={require('@/assets/images/patient1.png')}
-          />
+
+          <View className="h-[40px] w-[40px] overflow-hidden rounded-full">
+            <Image
+              source={require('@/assets/images/patient1.png')}
+              style={{ width: 40, height: 40, borderRadius: 20, resizeMode: 'cover' }}
+            />
+          </View>
         </View>
       </View>
 
-      <View className="my-6 flex h-auto w-[328px] flex-col items-center justify-center gap-[34px] py-4 ">
-        <View className="flex w-full flex-col items-center justify-center gap-4">
+      {/* Text + Buttons */}
+      <View className="my-6 flex w-full flex-col items-center justify-center gap-[34px] py-4">
+        <View className="flex flex-col items-center justify-center w-full gap-4">
           <Text
-            className={`tex-center w-full text-center text-[32px] font-bold ${
+            className={`text-center text-[28px] font-bold sm:text-[32px] ${
               isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
             }`}
           >
             Say Hello To Chioma,{'\n'}Your AI Assistant
           </Text>
           <Text
-            className={`mt-3 h-[48px] w-[328px] text-center text-[16px] leading-8 ${
+            className={` w-[320px] mt-2 text-center text-[15px] leading-6 ${
               isDark ? 'text-text-secondaryDark' : 'text-text-secondaryLight'
             }`}
           >
-            Your personal AI health companion that answers all your health related questions
+            Your personal AI health companion that answers all your health related questions.
           </Text>
         </View>
 
-        <View className="mb-6 mt-6 flex w-[328px] flex-col gap-4  space-y-4">
+        <View className="flex flex-col w-full gap-4 mt-4 mb-6">
           <Pressable
             onPress={onNext}
-            className="rounded-full bg-button-buttonBG py-4 active:opacity-80 "
+            className="py-4 rounded-full bg-button-buttonBG active:opacity-80"
           >
             <Text
               className={`text-center text-base font-semibold ${
@@ -139,19 +188,23 @@ export default function OnboardingScreen2({
           </Pressable>
 
           <Pressable
-            onPress={onSignIn}
-            className={`rounded-full py-4 ${
-              isDark ? 'bg-button-buttonSecondaryDark' : 'bg-button-buttonSecondaryLight'
-            } active:opacity-80`}
-          >
-            <Text
-              className={`text-center text-base font-semibold ${
-                isDark ? 'text-text-buttonSecondaryText' : 'text-text-buttonSecondaryText'
-              }`}
-            >
-              Sign In
-            </Text>
-          </Pressable>
+                        onPress={onSignIn}
+                        className={`rounded-full py-4 ${
+                          isDark ? 'bg-button-buttonSecondaryDark' : 'bg-button-buttonSecondaryLight'
+                        } active:opacity-80`}
+                        style={{
+                          minWidth: width > 480 ? 300 : '100%',
+                          backgroundColor: '#D1FAE5',
+                        }}
+                      >
+                        <Text
+                          className={`text-center text-base font-semibold ${
+                            isDark ? 'text-text-buttonSecondaryText' : 'text-text-buttonSecondaryText'
+                          }`}
+                        >
+                          Sign In
+                        </Text>
+                      </Pressable>
         </View>
       </View>
     </View>
