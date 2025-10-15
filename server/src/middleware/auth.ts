@@ -3,9 +3,8 @@ import admin from "../firebase";
 import User from "../models/User";
 
 export default async function firebaseAuth(ctx: Context, next: Next) {
-  console.log('[AUTH] middleware called');
-  const authHeader = ctx.headers.authorization;
-  console.log('[AUTH] Header:', authHeader);
+  const authHeader = ctx.headers.authorization || ctx.request.header.authorization;
+  console.log("AUTH HEADERS:", ctx.headers); // Debug: See incoming headers
 
   if (!authHeader) {
     ctx.status = 401;
@@ -16,7 +15,9 @@ export default async function firebaseAuth(ctx: Context, next: Next) {
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer") {
     ctx.status = 401;
-    ctx.body = { error: "Invalid Authorization header format. Expected: \'Bearer <token>\'" };
+    ctx.body = {
+      error: "Invalid Authorization header format. Expected: 'Bearer <token>'",
+    };
     return;
   }
 
@@ -24,7 +25,6 @@ export default async function firebaseAuth(ctx: Context, next: Next) {
 
   try {
     const decoded = await admin.auth().verifyIdToken(idToken);
-    console.log('[AUTH] Decoded token:', decoded);
 
     const uid = decoded.uid;
     const email = decoded.email ?? "";
@@ -36,8 +36,6 @@ export default async function firebaseAuth(ctx: Context, next: Next) {
     const setOnInsert: any = { role: "patient", uid };
     if (email) setOnInsert.email = email;
 
-    console.log('[AUTH] Upsert query:', { uid, email, displayName, update, setOnInsert });
-
     const dbUser = await User.findOneAndUpdate(
       { uid },
       {
@@ -47,14 +45,11 @@ export default async function firebaseAuth(ctx: Context, next: Next) {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).exec();
 
-    console.log('[AUTH] Upserted user:', dbUser);
-
     ctx.state.firebaseUser = decoded;
     ctx.state.user = dbUser;
 
     await next();
   } catch (err) {
-    console.error('[AUTH] Error:', err);
     ctx.status = 401;
     ctx.body = { error: "Invalid or expired token" };
   }

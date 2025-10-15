@@ -21,4 +21,8 @@ export function getFirebaseAuth(): Auth {
     authInstance = getAuth(app);
   }
   return authInstance;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 7702349103e189d416663b034e1f6b1acb004c3b
