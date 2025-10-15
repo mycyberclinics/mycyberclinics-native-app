@@ -57,9 +57,15 @@ module.exports = {
         boxShadow: {
           'green-soft': '0 4px 10px rgba(30, 210, 138, 0.1)',
         },
-        bodyBG: '#0B0E11'
+        bodyBG: '#0B0E11',
       },
     },
   },
   plugins: [],
+  safelist: [
+    'bg-button-buttonBG',
+    'bg-button-buttonSecondaryDark',
+    'bg-button-buttonSecondaryLight',
+    'text-text-buttonSecondaryTextLight',
+  ],
 };

@@ -15,9 +15,10 @@ import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthStore } from '@/store/auth';
-import { UserSchema } from '@/lib/schemas/user';
+import { SignupFormSchema } from '@/lib/schemas/user';
+import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 
-const Step1Schema = UserSchema.pick({ email: true, password: true });
+const Step1Schema = SignupFormSchema;
 
 type Step1FormValues = z.infer<typeof Step1Schema>;
 
@@ -25,6 +26,7 @@ export default function Step1Screen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  useTrackOnboardingStep();
 
   const {
     control,

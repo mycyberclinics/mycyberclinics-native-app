@@ -1,27 +1,40 @@
 import React from 'react';
-import { Redirect, Slot } from 'expo-router';
+import { Redirect, Slot, useSegments } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
 import { View, ActivityIndicator } from 'react-native';
 
 export default function AuthLayout() {
-  const { user, initializing, onboarding } = useAuthStore();
+  const { user, initializing, onboarding, lastStep } = useAuthStore();
+  const segments = useSegments() as unknown as string[];
 
-  console.log('[AuthLayout]', { initializing, onboarding, user });
+  console.log('[AuthLayout]', { initializing, onboarding, user, lastStep });
 
   if (initializing) {
     return (
-      <View className="items-center justify-center flex-1 bg-white">
+      <View className="flex-1 items-center justify-center bg-white">
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  // 🟡 Only redirect to /home when not onboarding
-  if (user && !onboarding) {
-    console.log('[AuthLayout] redirecting verified user to main/home');
-    return <Redirect href="/home" />;
+  const inSignupFlow = segments.includes('signup');
+
+  // if user exists but still onboarding, we stay inside signup flow
+  if (user && onboarding) {
+    console.log('[AuthLayout] onboarding user detected');
+    if (!inSignupFlow) {
+      // resume from lastStep or first signup screen
+      return <Redirect href={(lastStep as any) || '/(auth)/signup/emailPassword'} />;
+    }
+    return <Slot />;
   }
 
-  console.log('[AuthLayout] user is still onboarding or unauthenticated, render auth stack');
+  // if fully signed in & done onboarding → go to main/home
+  if (user && !onboarding) {
+    console.log('[AuthLayout] redirecting verified user to main/home');
+    return <Redirect href="/(main)/home" />;
+  }
+
+  // unauthenticated → stay in auth routes
   return <Slot />;
 }

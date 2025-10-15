@@ -8,6 +8,9 @@ import {
   ScrollView,
   ActivityIndicator,
   useColorScheme,
+  Platform,
+  useWindowDimensions,
+  Image,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -22,6 +25,7 @@ export default function SignInScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { width } = useWindowDimensions();
 
   const {
     control,
@@ -37,13 +41,19 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [focusedField, setFocusedField] = React.useState<string | null>(null);
 
+  const user = useAuthStore((state) => state.user);
+  const displayName =
+    user && 'email' in user && user.email ? user.email.split('@')[0] : user?.email || 'User';
+
+  const isTablet = width >= 768 && width < 1024;
+  const isDesktop = width >= 1024;
+
   const onSubmit = async (data: FormValues) => {
     if (!agreed) {
       alert('Please agree to the terms before signing in.');
       return;
     }
 
-    console.log('Signing in with:', data);
     try {
       await signIn(data.email, data.password);
       const user = useAuthStore.getState().user;
@@ -61,183 +71,252 @@ export default function SignInScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <ScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: Platform.OS === 'web' ? 60 : 0,
+      }}
+    >
       <View
-        className={`h-auto w-full flex-1 justify-between  px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
+        className={`flex-1 items-center justify-center ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
+        style={{
+          flexDirection: isDesktop ? 'row' : 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          minHeight: '100%',
+          paddingHorizontal: isTablet ? 40 : 20,
+        }}
       >
-        <View className='flex flex-col justify-center gap-6 items center'>
-          {/* Back button */}
-          <View className="mt-8">
-            <Pressable
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(onboarding)/onboardingScreen3');
-                }
+        {/*  side image on desktop or tablet. this will go on cleanup, just testing */}
+        {isTablet || isDesktop ? (
+          <View
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+            }}
+          >
+            <Image
+              source={require('@/assets/images/heroImage.png')}
+              resizeMode="contain"
+              style={{
+                width: isDesktop ? 420 : 300,
+                height: isDesktop ? 420 : 300,
+                opacity: 0.95,
               }}
-              className={`flex h-[40px] w-[40px] items-center justify-center rounded-full ${
-                isDark ? 'border border-[#2F343A] bg-[#15191E]' : 'bg-[#F3F4F6]'
+            />
+          </View>
+        ) : null}
+
+        <View
+          className={`h-auto w-full justify-between px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
+          style={{
+            maxWidth: isDesktop ? 480 : isTablet ? 420 : 360,
+            width: '100%',
+            alignSelf: 'center',
+            borderRadius: isDesktop ? 16 : 0,
+            paddingVertical: isDesktop ? 40 : 0,
+            boxShadow: isDesktop ? '0px 4px 20px rgba(0, 0, 0, 0.1)' : undefined,
+          }}
+        >
+          <View className="flex flex-col items-center justify-center gap-6">
+            <View className="mt-8 self-start">
+              <Pressable
+                onPress={() => {
+                  if (router.canGoBack()) {
+                    router.back();
+                  } else {
+                    router.replace('/(onboarding)/onboardingScreen3');
+                  }
+                }}
+                className={`flex h-[40px] w-[40px] items-center justify-center rounded-full ${
+                  isDark ? 'border border-[#2F343A] bg-[#15191E]' : 'bg-[#F3F4F6]'
+                }`}
+              >
+                <Feather name="arrow-left" size={22} color={isDark ? '#fff' : '#111827'} />
+              </Pressable>
+            </View>
+
+            <View className="h-auto w-full items-start justify-center gap-2">
+              <Text
+                className={`text-[28px] font-[700] leading-8 ${
+                  isDark ? 'text-text-secondaryTextDark' : 'text-text-textInverse'
+                }`}
+              >
+                {`Welcome Back, ${displayName}`}
+              </Text>
+              <Text
+                className={`text-[16px] font-[400] leading-6 ${
+                  isDark ? 'text-text-secondaryDark' : 'text-text-secondaryLight'
+                }`}
+              >
+                Login to continue to enjoy Cyberclinic
+              </Text>
+            </View>
+
+            <Text
+              className={`text-[14px] font-[500] ${
+                isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
               }`}
             >
-              <Feather name="arrow-left" size={22} color={isDark ? '#fff' : '#111827'} />
-            </Pressable>
-          </View>
-
-          {/* Header */}
-          <View className="h-auto w-[328px] items-start justify-center gap-2 ">
-            <Text
-              className={`text-[24px] font-[700] leading-8 ${isDark ? 'text-text-secondaryTextDark' : 'text-text-textInverse'} w-full `}
-            >
-              Welcome Back, Josh
+              Email
             </Text>
-            <Text
-              className={`h-[20px] w-full text-[14px] font-[400] leading-6  ${isDark ? 'text-text-secondaryDark' : 'text-text-secondaryLight'}`}
+            <View
+              className={`h-[48px] w-full flex-row items-center rounded-[4px] border px-[12px] ${
+                focusedField === 'email'
+                  ? 'border-[#1ED28A]'
+                  : isDark
+                    ? 'border-text-secondaryLight'
+                    : 'border-button-buttonLight'
+              } ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'}`}
             >
-              Login to continue to enjoy cyberclinic
-            </Text>
-          </View>
-
-          {/* Email */}
-          <Text
-            className={`h-[20px] w-[34px] text-[14px] font-[500]  ${isDark ? 'text-text-primaryDark' : 'text-text-textInverse'} `}
-          >
-            Email
-          </Text>
-          <View
-            className={`h-[40px] w-full flex-row items-center rounded-[4px] border px-[12px] ${
-              focusedField === 'email'
-                ? 'border-[#1ED28A]'
-                : isDark
-                  ? 'border-text-secondaryLight'
-                  : 'border-button-buttonLight'
-            } ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'}`}
-          >
-            <Feather name="mail" size={18} color="#9CA3AF" />
-            <Controller
-              control={control}
-              name="email"
-              rules={{
-                required: 'Email is required',
-                pattern: {
-                  value: /\S+@\S+\.\S+/,
-                  message: 'Enter a valid email address',
-                },
-              }}
-              render={({ field: { value, onChange } }) => (
-                <TextInput
-                  value={value}
-                  onChangeText={onChange}
-                  placeholder="Enter your email address"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  className={`flex-1 px-2 py-3 ${isDark ? 'text-misc-placeholderTextDark' : 'text-misc-placeHolderTextLight'}`}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              )}
-            />
-          </View>
-          {errors.email && (
-            <Text className="mb-3 text-sm text-red-400">{errors.email.message}</Text>
-          )}
-
-          {/* Password */}
-          <Text
-            className={`h-[20px] w-[59px] text-[14px] font-[500] leading-6  ${isDark ? 'text-text-primaryDark' : 'text-text-textInverse'} `}
-          >
-            Password
-          </Text>
-          <View
-            className={`h-[40px] w-full flex-row items-center justify-center rounded-[4px] border px-[12px] ${
-              focusedField === 'password'
-                ? 'border-[#1ED28A]'
-                : isDark
-                  ? 'border-text-secondaryLight'
-                  : 'border-button-buttonLight'
-            } ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'}`}
-          >
-            <Feather name="lock" size={18} color="#9CA3AF" />
-            <Controller
-              control={control}
-              name="password"
-              rules={{
-                required: 'Password is required',
-                minLength: { value: 6, message: 'Minimum 6 characters' },
-              }}
-              render={({ field: { value, onChange } }) => (
-                <TextInput
-                  value={value}
-                  onChangeText={onChange}
-                  placeholder="************"
-                  placeholderTextColor="#9CA3AF"
-                  secureTextEntry={!showPassword}
-                  className={`flex-1 px-2 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              )}
-            />
-            <Pressable onPress={() => setShowPassword((s) => !s)}>
-              <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#9CA3AF" />
-            </Pressable>
-          </View>
-          {errors.password && (
-            <Text className="mb-3 text-sm text-red-400">{errors.password.message}</Text>
-          )}
-
-          {/* Terms */}
-          <View className="flex-row items-center mt-2 mb-8">
-            <Checkbox
-              value={agreed}
-              onValueChange={setAgreed}
-              color={agreed ? '#10B981' : undefined}
-              className={` ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'} ${isDark ? 'border-text-secondaryLight' : 'border-button-buttonLight'}`}
-            />
-            <Text
-              className={`ml-2 flex-shrink text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
-            >
-              I agree to the <Text className="text-emerald-500">terms of service</Text> and{' '}
-              <Text className="text-emerald-500">privacy policy</Text> of cyberclinics
-            </Text>
-          </View>
-        </View>
-
-        <View className="items-center justify-center gap-6 mb-10 ">
-          {/* Sign in button */}
-          <TouchableOpacity
-            disabled={isSubmitting}
-            onPress={handleSubmit(onSubmit)}
-            className={`flex h-[48px] w-[328px] items-center justify-center rounded-full py-3 ${isDark ? 'border-button-signInButtonBorderDark' : 'border-button-signInButtonBorderLight'} ${
-              agreed
-                ? 'bg-button-buttonBG'
-                : isDark
-                  ? 'bg-button-buttonBG'
-                  : 'bg-button-buttonBGLight'
-            }`}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text
-                className={`text-center text-[14px] font-[500]  ${isDark ? 'text-text-textInverse' : 'text-text-secondaryTextDark'}`}
-              >
-                Sign in
-              </Text>
+              <Feather name="mail" size={18} color="#9CA3AF" />
+              <Controller
+                control={control}
+                name="email"
+                rules={{
+                  required: 'Email is required',
+                  pattern: {
+                    value: /\S+@\S+\.\S+/,
+                    message: 'Enter a valid email address',
+                  },
+                }}
+                render={({ field: { value, onChange } }) => (
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="Enter your email address"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    className={`flex-1 px-2 py-3 ${
+                      isDark ? 'text-misc-placeholderTextDark' : 'text-misc-placeHolderTextLight'
+                    }`}
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                )}
+              />
+            </View>
+            {errors.email && (
+              <Text className="mb-3 text-sm text-red-400">{errors.email.message}</Text>
             )}
-          </TouchableOpacity>
 
-          {/* Sign up link */}
-          <View className="flex-row justify-center mx-auto ">
             <Text
-              className={`text-[14px] font-[500]  ${isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'}`}
+              className={`text-[14px] font-[500] ${
+                isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
+              }`}
             >
-              {"Don't have an account?"}
+              Password
             </Text>
-            <Pressable onPress={() => router.push('/(auth)/signup/emailPassword')}>
-              <Text className="text-[14px] font-[500]  text-emerald-500"> Sign up</Text>
-            </Pressable>
+            <View
+              className={`h-[48px] w-full flex-row items-center justify-center rounded-[4px] border px-[12px] ${
+                focusedField === 'password'
+                  ? 'border-[#1ED28A]'
+                  : isDark
+                    ? 'border-text-secondaryLight'
+                    : 'border-button-buttonLight'
+              } ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'}`}
+            >
+              <Feather name="lock" size={18} color="#9CA3AF" />
+              <Controller
+                control={control}
+                name="password"
+                rules={{
+                  required: 'Password is required',
+                  minLength: { value: 6, message: 'Minimum 6 characters' },
+                }}
+                render={({ field: { value, onChange } }) => (
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="************"
+                    placeholderTextColor="#9CA3AF"
+                    secureTextEntry={!showPassword}
+                    className={`flex-1 px-2 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                )}
+              />
+              <Pressable onPress={() => setShowPassword((s) => !s)}>
+                <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#9CA3AF" />
+              </Pressable>
+            </View>
+            {errors.password && (
+              <Text className="mb-3 text-sm text-red-400">{errors.password.message}</Text>
+            )}
+
+            <View className="mb-8 mt-2 flex-row items-center">
+              <Checkbox
+                value={agreed}
+                onValueChange={setAgreed}
+                color={agreed ? '#10B981' : undefined}
+                className={`${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'} ${
+                  isDark ? 'border-text-secondaryLight' : 'border-button-buttonLight'
+                }`}
+              />
+              <Text
+                className={`ml-2 flex-shrink text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                style={{ maxWidth: isDesktop ? 420 : '100%' }}
+              >
+                I agree to the <Text className="text-emerald-500">terms of service</Text> and{' '}
+                <Text className="text-emerald-500">privacy policy</Text> of cyberclinics
+              </Text>
+            </View>
+          </View>
+
+          <View className="mb-10 items-center justify-center gap-6">
+            <TouchableOpacity
+              disabled={isSubmitting}
+              onPress={handleSubmit(onSubmit)}
+              className={`flex h-[48px] w-[328px] items-center justify-center rounded-full py-3 ${
+                isDark
+                  ? 'border-button-signInButtonBorderDark'
+                  : 'border-button-signInButtonBorderLight'
+              } ${
+                agreed
+                  ? 'bg-button-buttonBG'
+                  : isDark
+                    ? 'bg-button-buttonBG'
+                    : 'bg-button-buttonBGLight'
+              }`}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text
+                  className={`text-center text-[14px] font-[500] ${
+                    isDark ? 'text-text-textInverse' : 'text-text-secondaryTextDark'
+                  }`}
+                >
+                  Sign in
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <View className="mx-auto flex-row justify-center">
+              <Text
+                className={`text-[14px] font-[500] ${
+                  isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
+                }`}
+              >
+                {"Don't have an account? "}
+              </Text>
+              <Pressable onPress={() => router.push('/(auth)/signup/emailPassword')}>
+                <Text
+                  className={`text-[14px] font-[500] text-emerald-500 ${
+                    loading ? 'Wait...' : 'Sign Up'
+                  }`}
+                >
+                  Sign up
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </View>
