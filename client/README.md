@@ -90,204 +90,157 @@ global.css # Tailwind base styles
 git clone https://github.com/mycyberclinics/mycyberclinics-native-app.git
 cd mycyberclinics-native-app/client
 npm install --legacy-peer-deps
-Use --legacy-peer-deps to resolve temporary React 19 testing library conflicts.
+```
+Use `--legacy-peer-deps` to resolve temporary React 19 testing library conflicts.
 
+---
 
-2️⃣ Start Development Server
-npx expo start
+## 🐳 Docker Development
 
-Press a → Android emulator
+To run the frontend with Docker:
 
-Press i → iOS simulator
+```bash
+docker compose up
+```
 
-Or scan the QR code with Expo Go
+This will launch the Expo development server inside Docker.  
+- Expo Go and simulators will connect to the ports exposed in `docker-compose.yml`.
+- Make sure you use the correct LAN IP if you test on a real device.
 
+---
 
-3️⃣ Optional — Build Dev Clients
-eas build --profile development --platform android
-eas build --profile development --platform ios
+## 🔥 Firebase Emulator Setup (For Local Development & Backend API Testing)
 
+> **Required for local Auth, Firestore, Storage, and Functions development!**
 
-4️⃣ Environment Variables
+### **A. Prerequisite: Install Java**
 
-Create a .env file in the project root:
-- FIREBASE_API_KEY=xxxx
-- FIREBASE_AUTH_DOMAIN=xxxx
-- FIREBASE_PROJECT_ID=xxxx
+The Firebase Emulator Suite requires Java (JDK 11+).  
+If you see errors like `Could not spawn java -version`, follow these steps:
 
+#### **Windows**
+- Download and install from [Adoptium Temurin JDK](https://adoptium.net/temurin/releases/) or [Oracle JDK](https://www.oracle.com/java/technologies/downloads/).
+- After installation, add the Java `bin` directory (e.g., `C:\Program Files\Eclipse Adoptium\jdk-17.x.x\bin`) to your system `PATH`.
+- Restart your terminal and check:
+  ```sh
+  java -version
+  ```
+  You should see your Java version.
 
-Access via expo-constants
- or react-native-dotenv.
+#### **macOS**
+- Install via Homebrew:
+  ```sh
+  brew install temurin
+  ```
+- Or download from the Adoptium or Oracle links above.
+- Confirm installation:
+  ```sh
+  java -version
+  ```
 
+#### **Ubuntu/Linux**
+```sh
+sudo apt-get update
+sudo apt-get install openjdk-17-jdk
+java -version
+```
 
-🎨 Styling with NativeWind
+---
 
-babel.config.js
-module.exports = function (api) {
-  api.cache(true);
-  return {
-    presets: ["babel-preset-expo"],
-    plugins: ["nativewind/babel"],
-  };
-};
+### **B. Install Firebase CLI**
 
+```bash
+npm install -g firebase-tools
+```
 
-tailwind.config.js
+---
 
-module.exports = {
-  content: [
-    "./app/**/*.{js,jsx,ts,tsx}",
-    "./components/**/*.{js,jsx,ts,tsx}",
-    "./src/**/*.{js,jsx,ts,tsx}",
-  ],
-  presets: [require("nativewind/preset")],
-  theme: { extend: {} },
-  plugins: [],
-};
+### **C. Start the Firebase Emulators**
 
+From your project root (where `firebase.json` lives):
 
-Example:
+```bash
+firebase emulators:start
+```
 
-<View className="flex-1 items-center justify-center bg-emerald-500">
-  <Text className="text-white text-lg font-bold">NativeWind Works ✅</Text>
-</View>
+This will start:
+- **Auth Emulator:** http://localhost:9099
+- **Firestore Emulator:** http://localhost:8080
+- **Storage Emulator:** http://localhost:9199
+- **Functions Emulator:** http://localhost:5001
+- **Emulator UI:** http://localhost:4000
 
+> **Note:** If you run into permission errors, try with `sudo` or check your Java installation.
 
-🌗 Theme Support
+---
 
-Automatically detects dark/light mode via useColorScheme()
+### **D. Emulator Connection in the Frontend**
 
-Future plan: user override toggle in app settings (using Zustand)
+The app automatically connects to emulators in development mode (`__DEV__`), using the settings in `firebase.ts`.  
+No manual change needed—you can sign up, sign in, and interact with local Firestore/Storage/Functions.
 
+---
 
-🔒 Authentication Flow (Planned)
+### **E. Troubleshooting**
+- If you see `Could not spawn java -version`, repeat the Java install steps and ensure your terminal recognizes `java`.
+- On Windows, restart your computer after changing `PATH`.
+- If emulators fail to start, check for conflicting ports or missing rules files (`firestore.rules`, `storage.rules`).
 
-Firebase Auth handles Google/Apple/Email login
+---
 
-Server verification through Firebase Admin SDK
+## 🎨 Styling with NativeWind
 
-Optional Firestore integration for real-time sync
+See [NativeWind documentation](https://www.nativewind.dev/) for usage.
 
+---
 
-🧠 Onboarding Flow
+## 📦 Build & Deploy
 
-Displays only on first launch (tracked via AsyncStorage)
-
-Adapts to dark/light mode
-
-Multilingual support via react-i18next
-
-Built using Expo Router v6 file-based routing 
-
-
-🧩 State & Data Providers (Planned)
-<QueryClientProvider client={queryClient}>
-  <ZustandProvider>
-    <FirebaseProvider>
-      <Stack />
-    </FirebaseProvider>
-  </ZustandProvider>
-</QueryClientProvider>
-
-
-TanStack Query → API + Firestore caching / offline sync
-
-Zustand → Lightweight global state
-
-Zod → Runtime validation for all API schemas
-
-
-🧪 Testing
-Unit & Component
-
-jest-expo
-
-@testing-library/react-native
-
-Run tests:
-
-npm test
-
-
-End-to-End with Maestro (Optional)
-
-Maestro
- for mobile UI automation:
-
-maestro test
-
-
-🔧 Code Quality
-ESLint / Prettier
-// .eslintrc.js
-extends: ["universe/native", "prettier"]
-
-Husky + lint-staged
-"husky": {
-  "hooks": {
-    "pre-commit": "lint-staged"
-  }
-},
-"lint-staged": {
-  "*.{js,jsx,ts,tsx}": "eslint --fix"
-}
-
-
-Run lint manually:
-
-npm run lint
-
-
-📦 Build & Deploy
-
-Local Development
-
+Local Development:
+```bash
 npm run android     # Android emulator
 npm run ios         # iOS simulator
 npm run web         # Expo web
+```
 
-
-Cloud Builds (EAS)
-
+Cloud Builds (EAS):
+```bash
 eas build --platform android
 eas build --platform ios
+```
 
-
-OTA Updates
-
+OTA Updates:
+```bash
 eas update --branch production --message "Release notes here"
+```
 
+---
 
-📁 Key Files Overview
-
-app/_layout.tsx — Global layout: SafeArea, theme, splash
-
-app/index.tsx — Redirect entry point
-
-app/(onboarding)/ - on-boarding screens
-
-babel.config.js — Babel setup for Expo + NativeWind
-
-tailwind.config.js — Tailwind + NativeWind configuration
-
-global.css — Base CSS for NativeWind
-
-tsconfig.json — TypeScript config + path aliases
-
-
-
-💡 Contributing
+## 💡 Contributing
 
 Create a new branch
-
+```bash
 git checkout -b feature/your-feature
-
-
+```
 Make your changes
 
 Run linters before committing
-
+```bash
 npm run lint
-
+```
 
 Submit a PR with a clear description of your change
+
+---
+
+## 🧑‍💻 Getting Started: Full Local Setup Summary
+
+1. **Install Node.js & npm**
+2. **Install Java (JDK 11+)** (see steps above)
+3. **Install Firebase CLI**
+4. **Clone repo & install dependencies**
+5. **Start Firebase emulators:** `firebase emulators:start`
+6. **Start Docker/Expo:** `docker compose up` or `npx expo start`
+7. **Access Emulator UI:** http://localhost:4000
+
+You are now ready to develop with full local Firebase backend and frontend!
