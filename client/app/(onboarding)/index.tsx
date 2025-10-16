@@ -96,7 +96,7 @@ export default function OnboardingScreen({
             colors={gradientColors}
             start={{ x: 0.5, y: 1 }}
             end={{ x: 0.5, y: 0 }}
-            className="absolute bottom-[0%] left-[0] h-[100px] w-full "
+            className="absolute bottom-[0%] left-[14%] h-[100px] w-[238px] md:w-full "
           />
           <Image
             source={require('@/assets/images/onboarding2.png')}

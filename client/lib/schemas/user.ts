@@ -4,6 +4,7 @@ export const BackendUserSchema = z.object({
   _id: z.string().optional(),
   uid: z.string().optional(),
   email: z.email(),
+  bio: z.string().max(500).optional(),
   role: z.enum(['doctor', 'patient']).default('patient'),
   age: z.number().int().optional(),
   name: z.string().optional(),
@@ -19,7 +20,6 @@ export const BackendUserSchema = z.object({
   updatedAt: z.string().datetime().optional(),
 });
 export type BackendUser = z.infer<typeof BackendUserSchema>;
-
 
 export const SignupFormSchema = z.object({
   email: z.email(),

@@ -10,7 +10,6 @@ import {
   useColorScheme,
   Platform,
   useWindowDimensions,
-  Image,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -80,7 +79,7 @@ export default function SignInScreen() {
       }}
     >
       <View
-        className={`flex-1 items-center justify-center ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
+        className={`  flex-1 items-center justify-center ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
         style={{
           flexDirection: isDesktop ? 'row' : 'column',
           alignItems: 'center',
@@ -90,8 +89,7 @@ export default function SignInScreen() {
           paddingHorizontal: isTablet ? 40 : 20,
         }}
       >
-        {/*  side image on desktop or tablet. this will go on cleanup, just testing */}
-        {isTablet || isDesktop ? (
+        {/* {isTablet || isDesktop ? (
           <View
             style={{
               flex: 1,
@@ -110,10 +108,10 @@ export default function SignInScreen() {
               }}
             />
           </View>
-        ) : null}
+        ) : null} */}
 
         <View
-          className={`h-auto w-full justify-between px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
+          className={` h-full w-full justify-between  ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
           style={{
             maxWidth: isDesktop ? 480 : isTablet ? 420 : 360,
             width: '100%',
@@ -124,7 +122,7 @@ export default function SignInScreen() {
           }}
         >
           <View className="flex flex-col items-center justify-center gap-6">
-            <View className="mt-8 self-start">
+            <View className="self-start mt-8">
               <Pressable
                 onPress={() => {
                   if (router.canGoBack()) {
@@ -141,7 +139,7 @@ export default function SignInScreen() {
               </Pressable>
             </View>
 
-            <View className="h-auto w-full items-start justify-center gap-2">
+            <View className="items-start justify-center w-full h-auto gap-2">
               <Text
                 className={`text-[28px] font-[700] leading-8 ${
                   isDark ? 'text-text-secondaryTextDark' : 'text-text-textInverse'
@@ -159,7 +157,7 @@ export default function SignInScreen() {
             </View>
 
             <Text
-              className={`text-[14px] font-[500] ${
+              className={`self-start text-[14px] font-[500] ${
                 isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
               }`}
             >
@@ -207,7 +205,7 @@ export default function SignInScreen() {
             )}
 
             <Text
-              className={`text-[14px] font-[500] ${
+              className={`self-start text-[14px] font-[500] ${
                 isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
               }`}
             >
@@ -251,7 +249,7 @@ export default function SignInScreen() {
               <Text className="mb-3 text-sm text-red-400">{errors.password.message}</Text>
             )}
 
-            <View className="mb-8 mt-2 flex-row items-center">
+            <View className="flex-row items-center mt-2 mb-8">
               <Checkbox
                 value={agreed}
                 onValueChange={setAgreed}
@@ -270,7 +268,7 @@ export default function SignInScreen() {
             </View>
           </View>
 
-          <View className="mb-10 items-center justify-center gap-6">
+          <View className="items-center justify-center gap-6 mb-10">
             <TouchableOpacity
               disabled={isSubmitting}
               onPress={handleSubmit(onSubmit)}
@@ -299,7 +297,7 @@ export default function SignInScreen() {
               )}
             </TouchableOpacity>
 
-            <View className="mx-auto flex-row justify-center">
+            <View className="flex-row justify-center mx-auto">
               <Text
                 className={`text-[14px] font-[500] ${
                   isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
