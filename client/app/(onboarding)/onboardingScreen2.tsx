@@ -29,7 +29,7 @@ export default function OnboardingScreen2({
   const isDark = colorScheme === 'dark';
   const { width } = useWindowDimensions();
 
-  // ✅ Clamp content width so desktop doesn’t stretch layout
+  // content width so desktop doesn’t stretch layout
   const maxWidth = Math.min(width, 480);
 
   return (
@@ -43,7 +43,6 @@ export default function OnboardingScreen2({
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      {/* Progress + Skip */}
       <View className=" h-[20px] w-full flex-row items-center justify-between">
         <View className="h-[4px] flex-row items-center gap-1">
           {Array.from({ length: totalScreens }).map((_, i) => (
@@ -71,15 +70,11 @@ export default function OnboardingScreen2({
         </Pressable>
       </View>
 
-      {/* Chat + Chioma Section */}
-      <View className="relative mt-10 w-full max-w-[360px] flex-col items-center justify-center gap-4">
-        {/* Layered chat cards */}
-        <View className="relative items-center justify-center w-full">
-          {/* Layer shadows */}
-          <View className="absolute left-4 top-[58%] h-[66px] w-[336px] rounded-[12px] bg-misc-emptyView2" />
-          <View className="absolute left-1 top-[52%] h-[69px] w-[354px] rounded-[12px] bg-misc-emptyView1" />
 
-          {/* Chat card */}
+      <View className="relative mt-10 w-full max-w-[360px] flex-col items-center justify-center gap-4">
+        <View className="relative items-center justify-center w-full">
+          <View className="absolute left-4.5 top-[58%] h-[66px] w-[280px] md:w-[336px] rounded-[12px] bg-misc-emptyView2 " />
+          <View className="absolute left-2 top-[52%] h-[69px] w-[302px] md:w-[354px] rounded-[12px] bg-misc-emptyView1" />
           <View
             className={`relative z-30 flex w-full flex-row items-start justify-center gap-4 rounded-[12px] border px-4 py-8 ${
               isDark
