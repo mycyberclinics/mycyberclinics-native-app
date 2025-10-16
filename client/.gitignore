@@ -48,10 +48,4 @@ app-example
 /android
 
 # Firebase files & folders
-/functions
-.firebaserc
-firebase.json
-firestore.indexes.json
-firestore.rules
-storage.rules
 firestore-debug.log

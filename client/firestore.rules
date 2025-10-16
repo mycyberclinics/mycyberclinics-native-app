@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function isAuthed() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function hasRole(role) {
+      return isAuthed() && (
+        (role == "admin" && request.auth.token.admin == true) ||
+        (request.auth.token.role == role) ||
+        (request.auth.token.roles[role] == true)
+      );
+    }
+    function isAdmin()   { return hasRole("admin"); }
+    function isDoctor()  { return hasRole("physician"); }
+    function isNurse()   { return hasRole("nurse"); }
+    function isSupport() { return hasRole("support"); }
+    function isPatient(userId) { return isAuthed() && uid() == userId; }
+
+  }
+}

@@ -3,6 +3,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, connectAuthEmulator, Auth } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator, Firestore } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/storage';
+import { getFunctions, connectFunctionsEmulator, Functions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY!,
@@ -60,4 +61,18 @@ export function getFirebaseStorage(): FirebaseStorage {
     }
   }
   return storageInstance;
+}
+
+// Functions (NEW)
+let functionsInstance: Functions | undefined;
+export function getFirebaseFunctions(): Functions {
+  if (!functionsInstance) {
+    functionsInstance = getFunctions(app);
+
+    // Connect Functions Emulator in development
+    if (__DEV__) {
+      connectFunctionsEmulator(functionsInstance, emulatorHost, 5001);
+    }
+  }
+  return functionsInstance;
 }

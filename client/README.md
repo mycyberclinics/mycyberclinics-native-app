@@ -37,6 +37,8 @@ It’s designed for performance, scalability, and excellent developer experience
 
 ### 🔐 Authentication
 - **[Firebase Auth](https://firebase.google.com/docs/auth)** — Google / Apple / Email SSO  
+- Role-based authentication and permissions using **Firebase Emulator** for local development  
+- Custom claims for user roles (admin, doctor, patient, nurse, support)
 - Backend verification via **Firebase Admin SDK** on Koa + Mongo  
 
 ---
@@ -90,204 +92,208 @@ global.css # Tailwind base styles
 git clone https://github.com/mycyberclinics/mycyberclinics-native-app.git
 cd mycyberclinics-native-app/client
 npm install --legacy-peer-deps
-Use --legacy-peer-deps to resolve temporary React 19 testing library conflicts.
+```
+Use `--legacy-peer-deps` to resolve temporary React 19 testing library conflicts.
 
+---
 
-2️⃣ Start Development Server
-npx expo start
+## 🐳 Docker Development
 
-Press a → Android emulator
+To run the frontend with Docker:
 
-Press i → iOS simulator
+```bash
+docker compose up
+```
 
-Or scan the QR code with Expo Go
+This will launch the Expo development server inside Docker.  
+- Expo Go and simulators will connect to the ports exposed in `docker-compose.yml`.
+- Make sure you use the correct LAN IP if you test on a real device.
 
+---
 
-3️⃣ Optional — Build Dev Clients
-eas build --profile development --platform android
-eas build --profile development --platform ios
+## 🔥 Firebase Emulator Authentication — **Getting Started Guide for New Developers**
 
+This project uses the **Firebase Emulator Suite** for all authentication, user management, and role-based access control during local development.  
+This enables you to test login, sign-up, custom claims (roles), and security rules **without touching live Firebase data**.
 
-4️⃣ Environment Variables
+### **A. Prerequisite: Install Java**
 
-Create a .env file in the project root:
-- FIREBASE_API_KEY=xxxx
-- FIREBASE_AUTH_DOMAIN=xxxx
-- FIREBASE_PROJECT_ID=xxxx
+The Firebase Emulator Suite requires Java (JDK 11+).  
+If you see errors like `Could not spawn java -version`, follow these steps:
 
+#### **Windows**
+- Download and install from [Adoptium Temurin JDK](https://adoptium.net/temurin/releases/) or [Oracle JDK](https://www.oracle.com/java/technologies/downloads/).
+- After installation, add the Java `bin` directory (e.g., `C:\Program Files\Eclipse Adoptium\jdk-17.x.x\bin`) to your system `PATH`.
+- Open a new terminal and check:
+  ```sh
+  java -version
+  ```
+  You should see your Java version.
 
-Access via expo-constants
- or react-native-dotenv.
+#### **macOS**
+- Install via Homebrew:
+  ```sh
+  brew install temurin
+  ```
+- Or download from the Adoptium or Oracle links above.
+- Confirm installation:
+  ```sh
+  java -version
+  ```
 
+#### **Ubuntu/Linux**
+```sh
+sudo apt-get update
+sudo apt-get install openjdk-17-jdk
+java -version
+```
 
-🎨 Styling with NativeWind
+---
 
-babel.config.js
-module.exports = function (api) {
-  api.cache(true);
-  return {
-    presets: ["babel-preset-expo"],
-    plugins: ["nativewind/babel"],
-  };
-};
+### **B. Install Firebase CLI**
 
+```bash
+npm install -g firebase-tools
+```
 
-tailwind.config.js
+---
 
-module.exports = {
-  content: [
-    "./app/**/*.{js,jsx,ts,tsx}",
-    "./components/**/*.{js,jsx,ts,tsx}",
-    "./src/**/*.{js,jsx,ts,tsx}",
-  ],
-  presets: [require("nativewind/preset")],
-  theme: { extend: {} },
-  plugins: [],
-};
+### **C. Start the Firebase Emulators**
 
+From your project root (where `firebase.json` lives):
 
-Example:
+```bash
+firebase emulators:start --import=./firebase-data --export-on-exit
+```
 
-<View className="flex-1 items-center justify-center bg-emerald-500">
-  <Text className="text-white text-lg font-bold">NativeWind Works ✅</Text>
-</View>
+This will start:
+- **Auth Emulator:** http://localhost:9099
+- **Firestore Emulator:** http://localhost:8080
+- **Storage Emulator:** http://localhost:9199
+- **Functions Emulator:** http://localhost:5001
+- **Emulator UI:** http://localhost:4000
 
+> **Note:**  
+> - If you run into permission errors, try with `sudo` or check your Java installation.
+> - Data is persisted to `./firebase-data` so you can reuse your test users and claims.
 
-🌗 Theme Support
+---
 
-Automatically detects dark/light mode via useColorScheme()
+### **D. How the App Connects to the Emulator**
 
-Future plan: user override toggle in app settings (using Zustand)
+- The frontend is already configured to connect to the local emulator when in development mode (`__DEV__`).
+- **No manual config required!**
+- You can sign up, log in, and test authentication flows as you would in production.
+- All API calls and Firebase SDK calls will use emulator data.
 
+---
 
-🔒 Authentication Flow (Planned)
+### **E. Creating and Managing Test Users (Admin, Doctor, Patient, etc.)**
 
-Firebase Auth handles Google/Apple/Email login
+1. **Create test users** using the sign-up flow in the app, or directly in the Emulator UI (`http://localhost:4000`).
+2. **Assign roles (custom claims):**
+   - Use the built-in **Admin Role Manager** screen (usually at `/admin/roles` in the app) to set roles for users.
+   - Only users with the `admin` claim can access this screen.
+   - Set roles such as `{ roles: { admin: true, doctor: true, patient: false } }`.
+   - After roles are assigned, users should sign out and back in to refresh their claims.
 
-Server verification through Firebase Admin SDK
+---
 
-Optional Firestore integration for real-time sync
+### **F. Testing Role-Based Authentication**
 
+- **Sign in as different users** (admin, doctor, patient, etc.) and confirm your UI and data access are correctly restricted.
+- The app uses a `ClaimsProvider` context to make claims available everywhere.
+- **Admin users** can access the roles screen and change roles for other users.
+- **Non-admins** will see a "403 — Admins only" message if they try to access `/admin/roles`.
 
-🧠 Onboarding Flow
+---
 
-Displays only on first launch (tracked via AsyncStorage)
+### **G. Example Test Users (for dev onboarding)**
 
-Adapts to dark/light mode
+| Role   | Email              | Password | How to create         |
+|--------|--------------------|----------|-----------------------|
+| Admin  | josephdoe@hotmail.com     | Password123 | Sign up, set admin role in roles screen |
+| Doctor | markwilliams@hotmail.com    | Password123 | Sign up, set doctor role |
+| Nurse | vickkyjames@hotmail.com   | Password123 | Sign up, set nurse role |
+| Support | happiness@mycyberclinics.com   | Password123 | Sign up, set support role |
+| Patient | solatola@hotmail.com   | Password123 | Sign up, set patient role |
 
-Multilingual support via react-i18next
+You can view and manage users in the **Emulator UI** at [http://localhost:4000](http://localhost:4000).
 
-Built using Expo Router v6 file-based routing 
+---
 
+### **H. Troubleshooting**
 
-🧩 State & Data Providers (Planned)
-<QueryClientProvider client={queryClient}>
-  <ZustandProvider>
-    <FirebaseProvider>
-      <Stack />
-    </FirebaseProvider>
-  </ZustandProvider>
-</QueryClientProvider>
+- **If `Could not spawn java -version`:**  
+  - Install Java and add it to your system `PATH`.
+  - Restart your terminal/computer.
+- **If emulators fail to start:**  
+  - Check for conflicting ports or missing rules files (`firestore.rules`, `storage.rules`).
+- **If authentication doesn’t work:**  
+  - Ensure you’re running the emulators and your app is in development mode.
+  - Check the emulator logs for errors.
 
+---
 
-TanStack Query → API + Firestore caching / offline sync
+## 🎨 Styling with NativeWind
 
-Zustand → Lightweight global state
+See [NativeWind documentation](https://www.nativewind.dev/) for usage.
 
-Zod → Runtime validation for all API schemas
+---
 
+## 📦 Build & Deploy
 
-🧪 Testing
-Unit & Component
-
-jest-expo
-
-@testing-library/react-native
-
-Run tests:
-
-npm test
-
-
-End-to-End with Maestro (Optional)
-
-Maestro
- for mobile UI automation:
-
-maestro test
-
-
-🔧 Code Quality
-ESLint / Prettier
-// .eslintrc.js
-extends: ["universe/native", "prettier"]
-
-Husky + lint-staged
-"husky": {
-  "hooks": {
-    "pre-commit": "lint-staged"
-  }
-},
-"lint-staged": {
-  "*.{js,jsx,ts,tsx}": "eslint --fix"
-}
-
-
-Run lint manually:
-
-npm run lint
-
-
-📦 Build & Deploy
-
-Local Development
-
+Local Development:
+```bash
 npm run android     # Android emulator
 npm run ios         # iOS simulator
 npm run web         # Expo web
+```
 
-
-Cloud Builds (EAS)
-
+Cloud Builds (EAS):
+```bash
 eas build --platform android
 eas build --platform ios
+```
 
-
-OTA Updates
-
+OTA Updates:
+```bash
 eas update --branch production --message "Release notes here"
+```
 
+---
 
-📁 Key Files Overview
-
-app/_layout.tsx — Global layout: SafeArea, theme, splash
-
-app/index.tsx — Redirect entry point
-
-app/(onboarding)/ - on-boarding screens
-
-babel.config.js — Babel setup for Expo + NativeWind
-
-tailwind.config.js — Tailwind + NativeWind configuration
-
-global.css — Base CSS for NativeWind
-
-tsconfig.json — TypeScript config + path aliases
-
-
-
-💡 Contributing
+## 💡 Contributing
 
 Create a new branch
-
+```bash
 git checkout -b feature/your-feature
-
-
+```
 Make your changes
 
 Run linters before committing
-
+```bash
 npm run lint
-
+```
 
 Submit a PR with a clear description of your change
+
+---
+
+## 🧑‍💻 Full Local Setup Summary (for Firebase Emulator Auth!)
+
+1. **Install Node.js & npm**
+2. **Install Java (JDK 11+)** (see steps above)
+3. **Install Firebase CLI**
+4. **Clone repo & install dependencies**
+5. **Start Firebase emulators:**  
+   `firebase emulators:start --import=./firebase-data --export-on-exit`
+6. **Start Docker/Expo:**  
+   `docker compose up` or `npx expo start`
+7. **Access Emulator UI:**  
+   http://localhost:4000
+8. **Sign up test users, set roles, and test authentication flows!**
+
+You are now ready to develop and test with full local Firebase backend and frontend, including authentication and role-based access!
+
+---
