@@ -37,6 +37,8 @@ It’s designed for performance, scalability, and excellent developer experience
 
 ### 🔐 Authentication
 - **[Firebase Auth](https://firebase.google.com/docs/auth)** — Google / Apple / Email SSO  
+- Role-based authentication and permissions using **Firebase Emulator** for local development  
+- Custom claims for user roles (admin, doctor, patient, nurse, support)
 - Backend verification via **Firebase Admin SDK** on Koa + Mongo  
 
 ---
@@ -109,9 +111,10 @@ This will launch the Expo development server inside Docker.
 
 ---
 
-## 🔥 Firebase Emulator Setup (For Local Development & Backend API Testing)
+## 🔥 Firebase Emulator Authentication — **Getting Started Guide for New Developers**
 
-> **Required for local Auth, Firestore, Storage, and Functions development!**
+This project uses the **Firebase Emulator Suite** for all authentication, user management, and role-based access control during local development.  
+This enables you to test login, sign-up, custom claims (roles), and security rules **without touching live Firebase data**.
 
 ### **A. Prerequisite: Install Java**
 
@@ -121,7 +124,7 @@ If you see errors like `Could not spawn java -version`, follow these steps:
 #### **Windows**
 - Download and install from [Adoptium Temurin JDK](https://adoptium.net/temurin/releases/) or [Oracle JDK](https://www.oracle.com/java/technologies/downloads/).
 - After installation, add the Java `bin` directory (e.g., `C:\Program Files\Eclipse Adoptium\jdk-17.x.x\bin`) to your system `PATH`.
-- Restart your terminal and check:
+- Open a new terminal and check:
   ```sh
   java -version
   ```
@@ -160,7 +163,7 @@ npm install -g firebase-tools
 From your project root (where `firebase.json` lives):
 
 ```bash
-firebase emulators:start
+firebase emulators:start --import=./firebase-data --export-on-exit
 ```
 
 This will start:
@@ -170,21 +173,65 @@ This will start:
 - **Functions Emulator:** http://localhost:5001
 - **Emulator UI:** http://localhost:4000
 
-> **Note:** If you run into permission errors, try with `sudo` or check your Java installation.
+> **Note:**  
+> - If you run into permission errors, try with `sudo` or check your Java installation.
+> - Data is persisted to `./firebase-data` so you can reuse your test users and claims.
 
 ---
 
-### **D. Emulator Connection in the Frontend**
+### **D. How the App Connects to the Emulator**
 
-The app automatically connects to emulators in development mode (`__DEV__`), using the settings in `firebase.ts`.  
-No manual change needed—you can sign up, sign in, and interact with local Firestore/Storage/Functions.
+- The frontend is already configured to connect to the local emulator when in development mode (`__DEV__`).
+- **No manual config required!**
+- You can sign up, log in, and test authentication flows as you would in production.
+- All API calls and Firebase SDK calls will use emulator data.
 
 ---
 
-### **E. Troubleshooting**
-- If you see `Could not spawn java -version`, repeat the Java install steps and ensure your terminal recognizes `java`.
-- On Windows, restart your computer after changing `PATH`.
-- If emulators fail to start, check for conflicting ports or missing rules files (`firestore.rules`, `storage.rules`).
+### **E. Creating and Managing Test Users (Admin, Doctor, Patient, etc.)**
+
+1. **Create test users** using the sign-up flow in the app, or directly in the Emulator UI (`http://localhost:4000`).
+2. **Assign roles (custom claims):**
+   - Use the built-in **Admin Role Manager** screen (usually at `/admin/roles` in the app) to set roles for users.
+   - Only users with the `admin` claim can access this screen.
+   - Set roles such as `{ roles: { admin: true, doctor: true, patient: false } }`.
+   - After roles are assigned, users should sign out and back in to refresh their claims.
+
+---
+
+### **F. Testing Role-Based Authentication**
+
+- **Sign in as different users** (admin, doctor, patient, etc.) and confirm your UI and data access are correctly restricted.
+- The app uses a `ClaimsProvider` context to make claims available everywhere.
+- **Admin users** can access the roles screen and change roles for other users.
+- **Non-admins** will see a "403 — Admins only" message if they try to access `/admin/roles`.
+
+---
+
+### **G. Example Test Users (for dev onboarding)**
+
+| Role   | Email              | Password | How to create         |
+|--------|--------------------|----------|-----------------------|
+| Admin  | josephdoe@hotmail.com     | Password123 | Sign up, set admin role in roles screen |
+| Doctor | markwilliams@hotmail.com    | Password123 | Sign up, set doctor role |
+| Nurse | vickkyjames@hotmail.com   | Password123 | Sign up, set nurse role |
+| Support | happiness@mycyberclinics.com   | Password123 | Sign up, set support role |
+| Patient | solatola@hotmail.com   | Password123 | Sign up, set patient role |
+
+You can view and manage users in the **Emulator UI** at [http://localhost:4000](http://localhost:4000).
+
+---
+
+### **H. Troubleshooting**
+
+- **If `Could not spawn java -version`:**  
+  - Install Java and add it to your system `PATH`.
+  - Restart your terminal/computer.
+- **If emulators fail to start:**  
+  - Check for conflicting ports or missing rules files (`firestore.rules`, `storage.rules`).
+- **If authentication doesn’t work:**  
+  - Ensure you’re running the emulators and your app is in development mode.
+  - Check the emulator logs for errors.
 
 ---
 
@@ -233,14 +280,20 @@ Submit a PR with a clear description of your change
 
 ---
 
-## 🧑‍💻 Getting Started: Full Local Setup Summary
+## 🧑‍💻 Full Local Setup Summary (for Firebase Emulator Auth!)
 
 1. **Install Node.js & npm**
 2. **Install Java (JDK 11+)** (see steps above)
 3. **Install Firebase CLI**
 4. **Clone repo & install dependencies**
-5. **Start Firebase emulators:** `firebase emulators:start`
-6. **Start Docker/Expo:** `docker compose up` or `npx expo start`
-7. **Access Emulator UI:** http://localhost:4000
+5. **Start Firebase emulators:**  
+   `firebase emulators:start --import=./firebase-data --export-on-exit`
+6. **Start Docker/Expo:**  
+   `docker compose up` or `npx expo start`
+7. **Access Emulator UI:**  
+   http://localhost:4000
+8. **Sign up test users, set roles, and test authentication flows!**
 
-You are now ready to develop with full local Firebase backend and frontend!
+You are now ready to develop and test with full local Firebase backend and frontend, including authentication and role-based access!
+
+---

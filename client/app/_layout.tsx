@@ -7,6 +7,7 @@ import { useColorScheme, LogBox, View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
+import { ClaimsProvider } from "@/providers/ClaimsProvider";
 import { useAuthStore } from '@/store/auth';
 import DebugBanner from '@/components/DebuggerBanner';
 
@@ -54,19 +55,21 @@ function ThemedLayout({ colorScheme }: { colorScheme: 'light' | 'dark' | null | 
       }}
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <QueryProvider>
-        <AuthProvider>
-          <DebugBanner />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: {
-                backgroundColor: isDark ? '#0B0E11' : '#FFFFFF',
-              },
-            }}
-          />
-        </AuthProvider>
-      </QueryProvider>
+      <ClaimsProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <DebugBanner />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: {
+                  backgroundColor: isDark ? '#0B0E11' : '#FFFFFF',
+                },
+              }}
+            />
+          </AuthProvider>
+        </QueryProvider>
+      </ClaimsProvider>
     </View>
   );
 }
