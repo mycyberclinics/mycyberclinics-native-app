@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  useColorScheme,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, useColorScheme } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -16,7 +7,6 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
 import api from '@/lib/api/client';
 import ButtonComponent from '@/components/ButtonComponent';
-import { FileUploader } from '@/components/FileUploader';
 
 type UploadedFile = {
   name: string;
@@ -36,7 +26,7 @@ export default function DoctorCredentialScreen() {
   const [additionalFile, setAdditionalFile] = useState<UploadedFile | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Handle file pick
+  // Handle file pick
   const pickFile = async (setFile: (f: UploadedFile | null) => void) => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -64,7 +54,7 @@ export default function DoctorCredentialScreen() {
     }
   };
 
-  // ✅ Handle file upload (simulated API upload)
+  // simulated API file upload
   const uploadFile = async (file: UploadedFile, field: string) => {
     const formData = new FormData();
     formData.append('file', {
@@ -82,7 +72,6 @@ export default function DoctorCredentialScreen() {
     return response.data.url;
   };
 
-  // ✅ Submit data
   const handleContinue = async () => {
     try {
       setLoading(true);
@@ -124,7 +113,6 @@ export default function DoctorCredentialScreen() {
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
         <View className={`flex-1 px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}>
-          {/* Back */}
           <View className="mt-8">
             <Pressable
               onPress={() => router.back()}
@@ -136,7 +124,6 @@ export default function DoctorCredentialScreen() {
             </Pressable>
           </View>
 
-          {/* Header */}
           <View className="mb-4 mt-6">
             <Text className={`text-[18px] font-[700] ${isDark ? 'text-white' : 'text-[#0B1220]'}`}>
               Hi Doctor, Verify Your Medical Credentials
@@ -151,7 +138,6 @@ export default function DoctorCredentialScreen() {
             </Text>
           </View>
 
-          {/* Bio */}
           <Text
             className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
@@ -170,7 +156,6 @@ export default function DoctorCredentialScreen() {
             }`}
           />
 
-          {/* MDCN License Upload */}
           <View className="mt-6">
             <Text
               className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
@@ -214,7 +199,6 @@ export default function DoctorCredentialScreen() {
             )}
           </View>
 
-          {/* Additional Qualification Upload */}
           <View className="mt-6">
             <Text
               className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
@@ -259,7 +243,6 @@ export default function DoctorCredentialScreen() {
             )}
           </View>
 
-          {/* Continue */}
           <View className="mb-6 mt-10 items-center">
             <ButtonComponent
               title="Continue"

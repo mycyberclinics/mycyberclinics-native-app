@@ -53,7 +53,7 @@ export default function PersonalInfoScreen() {
 
   const { syncProfile } = useAuthStore();
 
-  // 🔥 Fetch suggestions from Google Places API
+  // fetch suggestions from Google Places API. fix on location issue yesterday
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (query.length < 2) {
@@ -140,7 +140,6 @@ export default function PersonalInfoScreen() {
           className={`w-full px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
           style={{ maxWidth: 480 }}
         >
-          {/* Back Button */}
           <Pressable
             onPress={() =>
               router.canGoBack() ? router.back() : router.replace('/(onboarding)/onboardingScreen3')
@@ -152,8 +151,7 @@ export default function PersonalInfoScreen() {
             <Feather name="arrow-left" size={22} color={isDark ? '#fff' : '#111827'} />
           </Pressable>
 
-          {/* Header */}
-          <View className="mt-4 mb-6">
+          <View className="mb-6 mt-4">
             <Text className={`text-[22px] font-[700] ${isDark ? 'text-white' : 'text-[#0B1220]'}`}>
               Almost Done 🎉
             </Text>
@@ -166,7 +164,6 @@ export default function PersonalInfoScreen() {
             </Text>
           </View>
 
-          {/* Phone */}
           <Text
             className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
@@ -197,7 +194,6 @@ export default function PersonalInfoScreen() {
             <Text className="mt-1 text-sm text-red-400">{errors.phone.message}</Text>
           )}
 
-          {/* DOB */}
           <View className="mt-4">
             <Text
               className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
@@ -240,7 +236,6 @@ export default function PersonalInfoScreen() {
             {errors.dob && <Text className="mt-1 text-sm text-red-400">{errors.dob.message}</Text>}
           </View>
 
-          {/* Gender */}
           <View className="mt-4">
             <Text
               className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
@@ -314,7 +309,6 @@ export default function PersonalInfoScreen() {
             />
           </View>
 
-          {/* Location */}
           <View className="mt-4">
             <Text
               className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
@@ -390,7 +384,6 @@ export default function PersonalInfoScreen() {
             />
           </View>
 
-          {/* Role */}
           <View className="mt-6">
             <Text
               className={`mb-3 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
@@ -440,8 +433,7 @@ export default function PersonalInfoScreen() {
             </View>
           </View>
 
-          {/* Continue */}
-          <View className="items-center mt-10 mb-8">
+          <View className="mb-8 mt-10 items-center">
             <ButtonComponent
               title="Continue"
               onPress={handleSubmit(onSubmit)}
