@@ -91,13 +91,95 @@ global.css # Tailwind base styles
 ```bash
 git clone https://github.com/mycyberclinics/mycyberclinics-native-app.git
 cd mycyberclinics-native-app/client
-npm install --legacy-peer-deps
+npm install
 ```
 Use `--legacy-peer-deps` to resolve temporary React 19 testing library conflicts.
 
 ---
 
 ## 🐳 Docker Development
+
+## ✅ How to Pull & Run Your Expo React Native App from Docker Hub
+
+Follow the steps below to pull and run your Expo React Native app inside a Docker container from your Docker Hub repository.
+
+---
+
+### 🔹 1. **Login to Docker Hub (if needed)**
+
+If your image is private, log in to Docker Hub:
+
+```bash
+docker login
+```
+
+You'll be prompted to enter your Docker Hub username and password (or a personal access token).
+
+---
+
+### 🔹 2. **Pull the Docker Image**
+
+Download the image from your Docker Hub account:
+
+```bash
+docker pull timex19/mycyberclinics:client-expo
+```
+
+This retrieves the Docker image containing your **Expo React Native** project.
+
+---
+
+### 🔹 3. **Run the Docker Container**
+
+Use the following command to start the container:
+
+```bash
+docker run -it   -e REACT_NATIVE_PACKAGER_HOSTNAME=10.184.137.118   -p 8081:8081   -p 19000:19000   -p 19001:19001   --name mycyberclinics-container   timex19/mycyberclinics:client-expo
+```
+
+#### 🔸 Explanation:
+
+* `-it`: Runs the container in interactive mode (useful for development/log output).
+* `-e REACT_NATIVE_PACKAGER_HOSTNAME=<your-ip-address>`: Sets the host IP for the React Native packager to enable communication with physical devices or emulators.
+* `-p`: Maps container ports to your host machine (required by Expo).
+
+  * `8081`: Metro bundler port
+  * `19000`: Expo DevTools
+  * `19001`: WebSocket port used by the Expo app
+* `--name`: (Optional) Names your container for easier reference.
+
+---
+
+### 💻 Accessing Your App
+
+Once running, you can access the Expo development interface via:
+
+```text
+http://localhost:19000
+```
+
+Use the Expo Go app (on a physical device) or an emulator to scan the QR code from the DevTools or connect using the Metro bundler interface.
+
+---
+
+### 🧼 Optional: Clean Up
+
+#### To stop and remove the container:
+
+```bash
+docker stop mycyberclinics-container
+docker rm mycyberclinics-container
+```
+
+#### To remove the image:
+
+```bash
+docker rmi timex19/mycyberclinics:client-expo
+```
+
+---
+
+
 
 To run the frontend with Docker:
 
