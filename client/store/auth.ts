@@ -69,7 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       const auth = getFirebaseAuth();
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const cred = await createUserWithEmailAndPassword(auth, email, password); 
       const { uid, email: em } = cred.user;
 
       // this should sync with backend (without password!) to avoid the parsing issue

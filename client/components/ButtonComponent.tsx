@@ -1,5 +1,5 @@
-import React from "react";
-import { Pressable, Text, useColorScheme, PressableProps } from "react-native";
+import React from 'react';
+import { Pressable, Text, useColorScheme, PressableProps } from 'react-native';
 
 type ButtonProps = {
   onPress: () => void;
@@ -7,27 +7,28 @@ type ButtonProps = {
   disabled?: boolean;
   style?: any;
   textStyle?: any;
-} & Omit<PressableProps, "onPress">;
+  loading?: boolean;
+} & Omit<PressableProps, 'onPress'>;
 
 const ButtonComponent: React.FC<ButtonProps> = ({
   onPress,
-  title = "Sign in",
+  title = 'Sign in',
   disabled,
   style,
   textStyle,
   ...rest
 }) => {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = colorScheme === 'dark';
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       className={`
-        w-full py-3 rounded-full items-center justify-center
-        ${isDark ? "bg-button-buttonBG" : "bg-button-buttonBGLight"}
-        ${disabled ? "opacity-50" : ""}
+        w-full items-center justify-center rounded-full py-3
+        ${isDark ? 'bg-button-buttonBG' : 'bg-button-buttonBGLight'}
+        ${disabled ? 'opacity-50' : ''}
       `}
       style={style}
       {...rest}
@@ -35,7 +36,7 @@ const ButtonComponent: React.FC<ButtonProps> = ({
       <Text
         className={`
           text-base font-normal
-          ${isDark ? "text-black" : "text-white"}
+          ${isDark ? 'text-black' : 'text-white'}
         `}
         style={textStyle}
       >

@@ -7,7 +7,7 @@ WORKDIR /app
 # Copy package files first (for caching)
 COPY package*.json ./
 
-# Install dependencies (including Expo CLI)
+# Install dependencies (including Expo CLI) 
 RUN npm install -g expo-cli
 RUN npm install
 
