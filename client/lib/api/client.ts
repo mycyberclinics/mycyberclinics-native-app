@@ -7,7 +7,7 @@ const TOKEN_KEY = 'mc_firebase_id_token';
 
 const api = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000',
-  timeout: 15000,
+  timeout: 25000,
 });
 
 // attach Firebase ID token to request payload
@@ -19,7 +19,7 @@ api.interceptors.request.use(async (config) => {
     const user = auth.currentUser;
 
     if (user) {
-      const token = await user.getIdToken(true);
+      const token = await user.getIdToken();  // force refresh if true is passed here 
       config.headers.Authorization = `Bearer ${token}`;
       return config;
     }
@@ -31,6 +31,8 @@ api.interceptors.request.use(async (config) => {
   } catch (err) {
     console.warn('[API] Token attach error:', err);
   }
+
+  console.log('[DEBUG] OUTGOING HEADERS:', config.headers);
 
   return config;
 });

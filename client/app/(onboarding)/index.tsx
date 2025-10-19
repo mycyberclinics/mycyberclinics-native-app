@@ -4,13 +4,13 @@ import {
   Text,
   Image,
   Pressable,
-  useColorScheme,
   Platform,
   useWindowDimensions,
   ScrollView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
+import ButtonComponent from '@/components/ButtonComponent';
 
 type ScreenProps = {
   onNext: () => void;
@@ -27,14 +27,10 @@ export default function OnboardingScreen({
   currentIndex,
   totalScreens,
 }: ScreenProps) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const { width } = useWindowDimensions();
 
-  const gradientColors =
-    colorScheme === 'dark'
-      ? (['rgba(0,0,0,0.95)', 'rgba(0,0,0,0.7)', 'transparent'] as const)
-      : (['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.6)', 'transparent'] as const);
+  // gradient adjusts automatically based on system theme
+  const gradientColors = ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.6)', 'transparent'] as const;
 
   return (
     <ScrollView
@@ -46,20 +42,16 @@ export default function OnboardingScreen({
       }}
     >
       <View
-        className={` mb-10 flex flex-1 flex-col items-center justify-center px-6 ${
-          isDark ? 'bg-[#0B0E11]' : 'bg-transparent'
-        }`}
+        className="mb-10 flex flex-1 flex-col items-center justify-center bg-transparent px-6 dark:bg-[#0B0E11]"
         style={{
           width: '100%',
           maxWidth: 480,
           alignSelf: 'center',
         }}
       >
-        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <StatusBar style="auto" />
 
-        <View
-          className={` w-full max-w-[328px] flex-row items-center justify-between ${isDark ? 'bg-transparent' : 'bg-transparent'}`}
-        >
+        <View className="w-full max-w-[328px] flex-row items-center justify-between bg-transparent">
           <View className="flex-row items-center gap-1">
             {Array.from({ length: totalScreens }).map((_, i) => (
               <View
@@ -67,25 +59,20 @@ export default function OnboardingScreen({
                 className={`h-[4px] w-[20px] rounded-[40px] ${
                   i === currentIndex
                     ? 'bg-button-buttonBG'
-                    : isDark
-                      ? 'bg-button-buttonDisabledBG'
-                      : 'bg-button-buttonLight'
+                    : 'bg-button-buttonLight dark:bg-button-buttonDisabledBG'
                 }`}
               />
             ))}
           </View>
 
           <Pressable onPress={onSkip}>
-            <Text
-              className={`text-sm font-semibold ${
-                isDark ? 'text-text-accentDark' : 'text-text-accentLight'
-              }`}
-            >
+            <Text className="text-sm font-semibold text-text-accentLight dark:text-text-accentDark">
               Skip
             </Text>
           </Pressable>
         </View>
 
+        {/* images + gradient overlay */}
         <View className="mt-16 h-auto w-full max-w-[328px] flex-col items-center justify-center">
           <Image
             source={require('@/assets/images/onboarding1.png')}
@@ -96,7 +83,7 @@ export default function OnboardingScreen({
             colors={gradientColors}
             start={{ x: 0.5, y: 1 }}
             end={{ x: 0.5, y: 0 }}
-            className="absolute bottom-[0%] left-[14%] h-[100px] w-[238px] md:w-full "
+            className="absolute bottom-[0%] left-[14%] h-[100px] w-[238px] md:w-full"
           />
           <Image
             source={require('@/assets/images/onboarding2.png')}
@@ -107,60 +94,38 @@ export default function OnboardingScreen({
 
         <View className="mt-14 flex w-full max-w-[328px] flex-col items-center justify-center gap-[34px] py-4">
           <View className="flex flex-col items-center justify-center">
-            <Text
-              className={`text-center text-[28px] font-bold md:text-[32px] ${
-                isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
-              }`}
-            >
+            <Text className="text-center text-[28px] font-bold text-text-primaryLight md:text-[32px] dark:text-text-primaryDark">
               Get Healthcare,{'\n'}Wherever You Are
             </Text>
             <Text
-              className={`mt-3 text-center text-[16px] leading-5 ${
-                isDark ? 'text-text-secondaryDark' : 'text-text-secondaryLight'
-              }`}
-              style={{
-                maxWidth: 340,
-              }}
+              className="mt-3 text-center text-[16px] leading-5 text-text-secondaryLight dark:text-text-secondaryDark"
+              style={{ maxWidth: 340 }}
             >
               Licensed doctors and specialists are just a tap away, from the comfort of your home.
             </Text>
           </View>
 
-          <View className=" flex w-full max-w-[328px] flex-col gap-6">
-            <Pressable
+          <View className="flex w-full max-w-[328px] flex-col gap-6">
+            <ButtonComponent
+              title="Continue"
               onPress={onNext}
-              className="py-4 rounded-full bg-button-buttonBG active:opacity-80"
               style={{
                 minWidth: width > 480 ? 300 : '100%',
               }}
-            >
-              <Text
-                className={`text-center text-base font-semibold ${
-                  isDark ? 'text-text-textInverse' : 'text-text-buttonSecondaryTextLight'
-                }`}
-              >
-                Continue
-              </Text>
-            </Pressable>
+            />
 
-            <Pressable
+            <ButtonComponent
+              title="Sign In"
               onPress={onSignIn}
-              className={`rounded-full py-4 ${
-                isDark ? 'bg-button-buttonSecondaryDark' : 'bg-button-buttonSecondaryLight'
-              } active:opacity-80`}
               style={{
                 minWidth: width > 480 ? 300 : '100%',
                 backgroundColor: '#D1FAE5',
+                borderColor: '#A7F3D0',
               }}
-            >
-              <Text
-                className={`text-center text-base font-semibold ${
-                  isDark ? 'text-text-buttonSecondaryText' : 'text-text-buttonSecondaryText'
-                }`}
-              >
-                Sign In
-              </Text>
-            </Pressable>
+              textStyle={{
+                color: '#047857',
+              }}
+            />
           </View>
         </View>
       </View>

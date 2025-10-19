@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { ActivityIndicator, View, Pressable, Text } from 'react-native';
 import { getFirebaseAuth } from '@/lib/firebase';
@@ -8,40 +8,55 @@ import { useAuthStore } from '@/store/auth';
 export default function MainLayout() {
   const router = useRouter();
   const segments = useSegments() as unknown as string[];
+  const pathname = usePathname();
 
   const { user, setUser, initializing, setInitializing, onboarding, lastStep, signOut, rehydrate } =
     useAuthStore();
-  const pathname = usePathname();
 
-  // 🧠 1️⃣ Rehydrate Zustand persisted state before doing anything
+  /** Track Firebase readiness */
+  const [firebaseReady, setFirebaseReady] = useState(false);
+
+  // Rehydrate Zustand persisted state
   useEffect(() => {
     console.log('[MainLayout] Rehydrating persisted auth state...');
     rehydrate();
   }, [rehydrate]);
 
-  // 🧠 2️⃣ Watch Firebase auth changes
+  //  Wait for Firebase auth to rehydrate before proceeding
   useEffect(() => {
     const auth = getFirebaseAuth();
     console.log('[MainLayout] Subscribing to Firebase auth state...');
 
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
         const { uid, email } = fbUser;
         console.log('[MainLayout] Firebase user detected:', email);
         setUser({ id: uid, email: email || '' });
+
+        // refresh & persist token for axios fallback
+        try {
+          const token = await fbUser.getIdToken();
+          const { default: SecureStore } = await import('expo-secure-store');
+          await SecureStore.setItemAsync('mc_firebase_id_token', token);
+        } catch (err) {
+          console.warn('[MainLayout] Failed to cache token:', err);
+        }
       } else {
         console.log('[MainLayout] No Firebase user.');
         setUser(null);
       }
+
+      // mark firebase ready AFTER it emits first state
+      setFirebaseReady(true);
       setInitializing(false);
     });
 
     return () => unsubscribe();
   }, [setUser, setInitializing]);
 
-  // 🧭 3️⃣ Navigation logic based on auth + onboarding state
+  // Run navigation logic only when Firebase is ready
   useEffect(() => {
-    if (initializing) return;
+    if (initializing || !firebaseReady) return;
 
     const inAuthFlow = segments[0] === '(auth)';
     const inMainFlow = segments[0] === '(main)';
@@ -57,53 +72,32 @@ export default function MainLayout() {
       inMainFlow,
     });
 
-    // 🚪 No user yet → go to signup
+    // No user yet → go to signup
     if (!user && !inAuthFlow) {
       console.log('[MainLayout] Redirect → /(auth)/signup/emailPassword (no user)');
       router.replace('/(auth)/signup/emailPassword');
       return;
     }
 
-    // 🧭 if onboarding resumed after refresh
+    // Resume onboarding
     if (user && onboarding) {
       if (!inSignupFlow || (lastStep && pathname !== lastStep)) {
         console.log('[MainLayout] Resuming onboarding →', lastStep);
-        router.replace(lastStep || ('/(auth)/signup/emailPassword' as any));
+        router.replace('/(auth)/signup/emailPassword');
       }
       return;
     }
 
-    // 🧩 Onboarding user → go back to their last onboarding step
-    if (user && onboarding) {
-      if (!inSignupFlow) {
-        console.log('[MainLayout] Redirect → lastStep or first signup screen');
-        if (lastStep) {
-          router.replace(lastStep as any);
-        } else {
-          router.replace('/(auth)/signup/emailPassword');
-        }
-      }
-      return;
-    }
-
-    // // if onboarding user - still setting up profile etc.
-    // if (user && onboarding && !inSignupFlow) {
-    //   console.log('[MainLayout] Redirect → lastStep or first signup screen');
-    //   if (lastStep) router.replace(lastStep as any);
-    //   else router.replace('/(auth)/signup/emailPassword');
-    //   return;
-    // }
-
-    // 🏠 Fully onboarded → go home
+    // Fully onboarded → go home
     if (user && !onboarding && !inMainFlow) {
       console.log('[MainLayout] Redirect → /(main)/home');
-      router.replace('/(main)/home' as any);
+      router.replace('/(main)/home');
       return;
     }
-  }, [initializing, user, onboarding, lastStep, segments, router, pathname]);
+  }, [initializing, firebaseReady, user, onboarding, lastStep, segments, router, pathname]);
 
-  // 🌀 Loading state
-  if (initializing) {
+  // Loading UI while waiting for Firebase
+  if (initializing || !firebaseReady) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
         <ActivityIndicator size="large" />
