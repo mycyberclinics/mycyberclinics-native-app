@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput, useColorScheme } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
 import api from '@/lib/api/client';
@@ -13,20 +13,22 @@ type UploadedFile = {
   size: number;
   uri: string;
   type?: string;
+  serverUrl?: string;
 };
 
 export default function DoctorCredentialScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const { syncProfile, completeSignUp } = useAuthStore();
+  const { completeSignUp } = useAuthStore();
 
   const [bio, setBio] = useState('');
   const [mdcnFile, setMdcnFile] = useState<UploadedFile | null>(null);
   const [additionalFile, setAdditionalFile] = useState<UploadedFile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  // Handle file pick
+
   const pickFile = async (setFile: (f: UploadedFile | null) => void) => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -54,50 +56,45 @@ export default function DoctorCredentialScreen() {
     }
   };
 
-  // simulated API file upload
-  const uploadFile = async (file: UploadedFile, field: string) => {
+
+  const uploadDocs = async () => {
     const formData = new FormData();
-    formData.append('file', {
-      uri: file.uri,
-      name: file.name,
-      type: file.type || 'application/pdf',
-    } as any);
 
-    formData.append('fileType', field);
+    if (mdcnFile) {
+      formData.append('mcdnLicense', {
+        uri: mdcnFile.uri,
+        name: mdcnFile.name,
+        type: mdcnFile.type || 'application/pdf',
+      } as any);
+    }
 
-    const response = await api.post('/api/upload', formData, {
+    if (additionalFile) {
+      formData.append('additionalQualification', {
+        uri: additionalFile.uri,
+        name: additionalFile.name,
+        type: additionalFile.type || 'application/pdf',
+      } as any);
+    }
+
+    const response = await api.post('/api/profile/upload-doc', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    return response.data.url;
+    return response.data;
   };
+
 
   const handleContinue = async () => {
     try {
       setLoading(true);
+      await uploadDocs();
 
-      let mdcnUrl = '';
-      let additionalUrl = '';
-
-      if (mdcnFile) {
-        mdcnUrl = await uploadFile(mdcnFile, 'doc');
-      }
-
-      if (additionalFile) {
-        additionalUrl = await uploadFile(additionalFile, 'doc');
-      }
-
-      await syncProfile({
-        role: 'doctor',
-        bio,
-        files: [
-          ...(mdcnUrl ? [{ fileType: 'doc', fileUrl: mdcnUrl }] : []),
-          ...(additionalUrl ? [{ fileType: 'doc', fileUrl: additionalUrl }] : []),
-        ],
-      });
-
+      setSuccess(true);
       completeSignUp();
-      router.replace('/(main)/home');
+
+      setTimeout(() => {
+        router.replace('/(main)/home');
+      }, 1800);
     } catch (err) {
       console.error('[DoctorCredential] Submit error:', err);
     } finally {
@@ -113,6 +110,7 @@ export default function DoctorCredentialScreen() {
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
         <View className={`flex-1 px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}>
+          {/* Back */}
           <View className="mt-8">
             <Pressable
               onPress={() => router.back()}
@@ -124,7 +122,8 @@ export default function DoctorCredentialScreen() {
             </Pressable>
           </View>
 
-          <View className="mb-4 mt-6">
+
+          <View className="mt-6 mb-4">
             <Text className={`text-[18px] font-[700] ${isDark ? 'text-white' : 'text-[#0B1220]'}`}>
               Hi Doctor, Verify Your Medical Credentials
             </Text>
@@ -137,6 +136,7 @@ export default function DoctorCredentialScreen() {
               to upload relevant documentation.
             </Text>
           </View>
+
 
           <Text
             className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
@@ -156,11 +156,12 @@ export default function DoctorCredentialScreen() {
             }`}
           />
 
+
           <View className="mt-6">
             <Text
               className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
             >
-              Current MDCN Annual Practice License (to be updated yearly in Q1) – Required
+              Current MDCN Annual Practice License – Required
             </Text>
             <Pressable
               onPress={() => pickFile(setMdcnFile)}
@@ -170,7 +171,7 @@ export default function DoctorCredentialScreen() {
             >
               <Feather name="upload-cloud" size={24} color="#9CA3AF" />
               <Text className="mt-2 text-[13px] font-[500] text-[#1ED28A]">Click to upload</Text>
-              <Text className="text-[12px] text-gray-400">PDF, PPT, XLS or JPG (max 5mb)</Text>
+              <Text className="text-[12px] text-gray-400">PDF, PPT, XLS or JPG (max 5MB)</Text>
             </Pressable>
 
             {mdcnFile && (
@@ -188,7 +189,7 @@ export default function DoctorCredentialScreen() {
                       {mdcnFile.name}
                     </Text>
                     <Text className="text-[12px] text-gray-500">
-                      {(mdcnFile.size / (1024 * 1024)).toFixed(1)} MB
+                      {((mdcnFile.size ?? 0) / (1024 * 1024)).toFixed(1)} MB
                     </Text>
                   </View>
                 </View>
@@ -199,12 +200,12 @@ export default function DoctorCredentialScreen() {
             )}
           </View>
 
+
           <View className="mt-6">
             <Text
               className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
             >
-              Additional Qualification (Part I/II or Primary Certificate)
-              {'\n'}for Resident/Consultant placement (optional)
+              Additional Qualification (optional)
             </Text>
             <Pressable
               onPress={() => pickFile(setAdditionalFile)}
@@ -214,7 +215,7 @@ export default function DoctorCredentialScreen() {
             >
               <Feather name="upload-cloud" size={24} color="#9CA3AF" />
               <Text className="mt-2 text-[13px] font-[500] text-[#1ED28A]">Click to upload</Text>
-              <Text className="text-[12px] text-gray-400">PDF, PPT, XLS or JPG (max 5mb)</Text>
+              <Text className="text-[12px] text-gray-400">PDF, PPT, XLS or JPG (max 5MB)</Text>
             </Pressable>
 
             {additionalFile && (
@@ -232,7 +233,7 @@ export default function DoctorCredentialScreen() {
                       {additionalFile.name}
                     </Text>
                     <Text className="text-[12px] text-gray-500">
-                      {(additionalFile.size / (1024 * 1024)).toFixed(1)} MB
+                      {((additionalFile.size ?? 0) / (1024 * 1024)).toFixed(1)} MB
                     </Text>
                   </View>
                 </View>
@@ -243,7 +244,8 @@ export default function DoctorCredentialScreen() {
             )}
           </View>
 
-          <View className="mb-6 mt-10 items-center">
+
+          <View className="items-center mt-10 mb-6">
             <ButtonComponent
               title="Continue"
               onPress={handleContinue}
@@ -254,6 +256,26 @@ export default function DoctorCredentialScreen() {
           </View>
         </View>
       </ScrollView>
+
+
+      {success && (
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(300)}
+          className="absolute inset-0 items-center justify-center bg-black/60"
+        >
+          <Animated.View
+            entering={ZoomIn.duration(500)}
+            exiting={ZoomOut.duration(300)}
+            className="items-center"
+          >
+            <View className="mb-3 h-[80px] w-[80px] items-center justify-center rounded-full bg-[#1ED28A]">
+              <Feather name="check" size={38} color="#fff" />
+            </View>
+            <Text className="text-[18px] font-[600] text-white">Verification Complete!</Text>
+          </Animated.View>
+        </Animated.View>
+      )}
     </Animated.View>
   );
 }

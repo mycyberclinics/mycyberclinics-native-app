@@ -11,13 +11,13 @@ export default function AuthLayout() {
 
   if (initializing) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="items-center justify-center flex-1 bg-white">
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  const inSignupFlow = segments.includes('signup');
+  const inSignupFlow = segments.includes('signup'); 
 
   // if user exists but still onboarding, we stay inside signup flow
   if (user && onboarding) {
@@ -36,5 +36,5 @@ export default function AuthLayout() {
   }
 
   // unauthenticated → stay in auth routes
-  return <Slot />;
+  return <Slot />; 
 }

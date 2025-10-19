@@ -19,7 +19,7 @@ api.interceptors.request.use(async (config) => {
     const user = auth.currentUser;
 
     if (user) {
-      const token = await user.getIdToken();
+      const token = await user.getIdToken(true);
       config.headers.Authorization = `Bearer ${token}`;
       return config;
     }
@@ -38,7 +38,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('[API] Error:', error?.message ?? error); 
+    console.error('[API] Error:', error?.message ?? error);
     if (error.response?.status === 401) {
       console.warn('[API] Unauthorized — clearing auth');
       const auth = getFirebaseAuth();
@@ -55,7 +55,7 @@ export async function fetchProfile() {
     console.log('[API] profile parsed:', user);
     return user;
   } catch (error) {
-    console.error('[API] profile fetch failed', error); 
+    console.error('[API] profile fetch failed', error);
     throw error;
   }
 }

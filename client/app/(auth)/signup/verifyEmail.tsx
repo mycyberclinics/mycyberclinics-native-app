@@ -43,9 +43,7 @@ export default function ConfirmEmailScreen() {
 
   const auth = getFirebaseAuth();
 
-
-  const { user, loading, setLoading, completeSignUp } = useAuthStore();
-
+  const { user, loading, setLoading} = useAuthStore();
 
   const [resending, setResending] = useState(false);
   const [resendCooldownSec, setResendCooldownSec] = useState(0);
@@ -170,11 +168,11 @@ export default function ConfirmEmailScreen() {
       ? Linking.addEventListener('url', urlListener)
       : Linking.addEventListener('url', urlListener);
 
-    // also check when the app becomes active 
+    // also check when the app becomes active
     const subscription = AppState.addEventListener
       ? AppState.addEventListener('change', (state: AppStateStatus) => {
           if (state === 'active') {
-            // when the app resumes, re-check user again 
+            // when the app resumes, re-check user again
             reloadAndCheck();
           }
         })
@@ -183,7 +181,7 @@ export default function ConfirmEmailScreen() {
     return () => {
       try {
         if (sub && typeof sub.remove === 'function') sub.remove();
-        if (subscription && typeof subscription.remove === 'function') subscription.remove();
+        if (subscription && typeof subscription.remove === 'function') subscription.remove(); 
       } catch (e) {
         console.error("Couldn't remove listener: ", e);
       }
@@ -198,10 +196,11 @@ export default function ConfirmEmailScreen() {
     }
 
     // call store action to clear onboarding and move to next screen
-    // could be changed if it doesn't meet project edpecations 
+    // could be changed if it doesn't meet project edpecations
     try {
       // called completeSignUp here from the store to clear onboarding flag
-      completeSignUp();
+      // completeSignUp();
+      console.log('[ConfirmEmail] continuing to personal info screen');
       router.replace('/(auth)/signup/personalInfo');
     } catch (err) {
       console.error('[ConfirmEmail] continue error', err);
@@ -213,7 +212,7 @@ export default function ConfirmEmailScreen() {
       <View
         className={`flex-1 justify-between px-6 ${isDark ? 'bg-bodyBG' : 'bg-card-cardBGLight'}`}
       >
-        <View className="flex flex-col items-start justify-center gap-4 mt-10 border-2 border-white">
+        <View className="flex flex-col items-start justify-center gap-4 mt-10 ">
           <View className="mt-8">
             <Pressable
               onPress={() => {

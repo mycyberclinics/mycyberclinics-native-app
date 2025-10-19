@@ -26,7 +26,7 @@ export default function Step1Screen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  useTrackOnboardingStep();
+  useTrackOnboardingStep(); // uses this hook to track the user's current onboarding screen to fall back to on refresh
 
   const {
     control,

@@ -89,27 +89,6 @@ export default function SignInScreen() {
           paddingHorizontal: isTablet ? 40 : 20,
         }}
       >
-        {/* {isTablet || isDesktop ? (
-          <View
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 20,
-            }}
-          >
-            <Image
-              source={require('@/assets/images/heroImage.png')}
-              resizeMode="contain"
-              style={{
-                width: isDesktop ? 420 : 300,
-                height: isDesktop ? 420 : 300,
-                opacity: 0.95,
-              }}
-            />
-          </View>
-        ) : null} */}
-
         <View
           className={` h-full w-full justify-between  ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
           style={{
@@ -122,7 +101,7 @@ export default function SignInScreen() {
           }}
         >
           <View className="flex flex-col items-center justify-center gap-6">
-            <View className="self-start mt-8">
+            <View className="mt-8 self-start">
               <Pressable
                 onPress={() => {
                   if (router.canGoBack()) {
@@ -139,7 +118,7 @@ export default function SignInScreen() {
               </Pressable>
             </View>
 
-            <View className="items-start justify-center w-full h-auto gap-2">
+            <View className="h-auto w-full items-start justify-center gap-2">
               <Text
                 className={`text-[28px] font-[700] leading-8 ${
                   isDark ? 'text-text-secondaryTextDark' : 'text-text-textInverse'
@@ -191,7 +170,10 @@ export default function SignInScreen() {
                     placeholderTextColor="#9CA3AF"
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    className={`flex-1 px-2 py-3 ${
+                    underlineColorAndroid="transparent"
+                    selectionColor="transparent"
+                    style={{ outlineStyle: 'none' }}
+                    className={`flex-1 border-0 px-2 py-3 ${
                       isDark ? 'text-misc-placeholderTextDark' : 'text-misc-placeHolderTextLight'
                     }`}
                     onFocus={() => setFocusedField('email')}
@@ -235,6 +217,9 @@ export default function SignInScreen() {
                     placeholder="************"
                     placeholderTextColor="#9CA3AF"
                     secureTextEntry={!showPassword}
+                    underlineColorAndroid="transparent"
+                    selectionColor="transparent"
+                    style={{ outlineStyle: 'none' }}
                     className={`flex-1 px-2 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
@@ -249,7 +234,7 @@ export default function SignInScreen() {
               <Text className="mb-3 text-sm text-red-400">{errors.password.message}</Text>
             )}
 
-            <View className="flex-row items-center mt-2 mb-8">
+            <View className="mb-8 mt-2 flex-row items-center">
               <Checkbox
                 value={agreed}
                 onValueChange={setAgreed}
@@ -268,7 +253,7 @@ export default function SignInScreen() {
             </View>
           </View>
 
-          <View className="items-center justify-center gap-6 mb-10">
+          <View className="mb-10 items-center justify-center gap-6">
             <TouchableOpacity
               disabled={isSubmitting}
               onPress={handleSubmit(onSubmit)}
@@ -297,7 +282,7 @@ export default function SignInScreen() {
               )}
             </TouchableOpacity>
 
-            <View className="flex-row justify-center mx-auto">
+            <View className="mx-auto flex-row justify-center">
               <Text
                 className={`text-[14px] font-[500] ${
                   isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
