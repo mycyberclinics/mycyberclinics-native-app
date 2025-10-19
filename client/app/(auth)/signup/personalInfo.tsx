@@ -5,9 +5,9 @@ import {
   Pressable,
   ScrollView,
   Platform,
-  useColorScheme,
   ActivityIndicator,
   TextInput,
+  useColorScheme,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Controller, useForm, type SubmitHandler } from 'react-hook-form';
@@ -35,23 +35,21 @@ const ProfileCompletionSchema = BackendUserSchema.pick({
 type FormValues = z.infer<typeof ProfileCompletionSchema>;
 
 export default function PersonalInfoScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const router = useRouter();
-
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [genderOpen, setGenderOpen] = useState(false);
   const genderOptions = ['Male', 'Female', 'Other'] as const;
 
-  // location autocomplete states
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<{ description: string; place_id: string }[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   const { syncProfile } = useAuthStore();
 
-  // fetch Google Places suggestions
+  const colorScheme = useColorScheme();
+
+  // Google Places autocomplete
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (query.length < 2) {
@@ -107,10 +105,8 @@ export default function PersonalInfoScreen() {
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
       setApiError(null);
-
       console.log('[Personal Info Submitted]', data);
 
-      // expected payload structure for backend
       const payload = {
         phone: data.phone,
         dob: data.dob.toISOString(),
@@ -120,17 +116,11 @@ export default function PersonalInfoScreen() {
         bio: '',
       };
 
-      // send to backend
       const response = await api.post('/api/profile/complete', payload);
       console.log('[Profile Complete Response]', response.data);
 
-      // sync to local store
-      await syncProfile({
-        ...data,
-        role: data.role,
-      });
+      await syncProfile({ ...data, role: data.role });
 
-      // show success toast. we might opt for global toast later
       Toast.show({
         type: 'success',
         text1: 'Profile saved successfully 🎉',
@@ -141,7 +131,6 @@ export default function PersonalInfoScreen() {
         visibilityTime: 2500,
       });
 
-      // navigate after a short delay - 2.5s
       setTimeout(() => {
         if (data.role === 'doctor') {
           router.push('/(auth)/signup/doctorCredential');
@@ -151,11 +140,9 @@ export default function PersonalInfoScreen() {
       }, 2200);
     } catch (error: any) {
       console.error('[Personal Info] Error syncing:', error?.response?.data || error);
-
       const message =
         error?.response?.data?.error ||
         'Failed to save profile. Please check your internet connection and try again.';
-
       setApiError(message);
 
       Toast.show({
@@ -181,52 +168,44 @@ export default function PersonalInfoScreen() {
             paddingVertical: Platform.OS === 'web' ? 60 : 40,
           }}
         >
-          <View
-            className={`w-full px-6 ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
-            style={{ maxWidth: 480 }}
-          >
+          <View className="w-full bg-white px-6 dark:bg-[#0B0E11]" style={{ maxWidth: 480 }}>
+
             <Pressable
-              onPress={() =>
-                router.canGoBack()
-                  ? router.back()
-                  : router.replace('/(onboarding)/onboardingScreen3')
-              }
-              className={`mt-2 h-[40px] w-[40px] items-center justify-center rounded-full ${
-                isDark ? 'border border-[#2F343A] bg-[#15191E]' : 'bg-[#F3F4F6]'
-              }`}
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(auth)/signup/personalInfo'); //user shouldn't go back after verifying email
+                }
+              }}
+              className="dark:bg-misc-circleBtnDark flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder "
             >
-              <Feather name="arrow-left" size={22} color={isDark ? '#fff' : '#111827'} />
+              <Feather
+                name="arrow-left"
+                size={22}
+                color={colorScheme === 'dark' ? '#F5F5F5' : '#111827'}
+              />
             </Pressable>
 
-            <View className="mb-6 mt-4">
-              <Text
-                className={`text-[22px] font-[700] ${isDark ? 'text-white' : 'text-[#0B1220]'}`}
-              >
+
+            <View className="mt-4 mb-6">
+              <Text className="text-[22px] font-[700] text-[#0B1220] dark:text-white">
                 Almost Done 🎉
               </Text>
-              <Text
-                className={`mt-2 text-[14px] ${
-                  isDark ? 'text-text-secondaryDark' : 'text-text-secondaryLight'
-                }`}
-              >
+              <Text className="mt-2 text-[14px] text-text-secondaryLight dark:text-text-secondaryDark">
                 We’ll personalize your health journey with a few quick details.
               </Text>
             </View>
 
-            <Text
-              className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
-            >
+
+            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
               Phone number
             </Text>
             <Controller
               control={control}
               name="phone"
               render={({ field: { value, onChange } }) => (
-                <View
-                  className={`h-[48px] flex-row items-center rounded-[8px] border px-[12px] ${
-                    isDark ? 'border-[#2F343A] bg-[#15191E]' : 'border-gray-300 bg-gray-50'
-                  }`}
-                >
+                <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
                   <Feather name="phone" size={18} color="#9CA3AF" />
                   <TextInput
                     value={value}
@@ -234,7 +213,7 @@ export default function PersonalInfoScreen() {
                     placeholder="+234 70 896 1234"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="phone-pad"
-                    className={`flex-1 px-2 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
                   />
                 </View>
               )}
@@ -243,10 +222,9 @@ export default function PersonalInfoScreen() {
               <Text className="mt-1 text-sm text-red-400">{errors.phone.message}</Text>
             )}
 
+
             <View className="mt-4">
-              <Text
-                className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
-              >
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
                 Date of birth
               </Text>
               <Controller
@@ -255,13 +233,9 @@ export default function PersonalInfoScreen() {
                 render={({ field: { value, onChange } }) => (
                   <>
                     <Pressable onPress={() => setShowDatePicker(true)}>
-                      <View
-                        className={`h-[48px] flex-row items-center rounded-[8px] border px-[12px] ${
-                          isDark ? 'border-[#2F343A] bg-[#15191E]' : 'border-gray-300 bg-gray-50'
-                        }`}
-                      >
+                      <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
                         <Feather name="calendar" size={18} color="#9CA3AF" />
-                        <Text className={`flex-1 px-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        <Text className="flex-1 px-2 text-gray-900 dark:text-white">
                           {value ? value.toDateString() : 'Select date of birth'}
                         </Text>
                         <Feather name="chevron-down" size={18} color="#9CA3AF" />
@@ -287,10 +261,9 @@ export default function PersonalInfoScreen() {
               )}
             </View>
 
+
             <View className="mt-4">
-              <Text
-                className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
-              >
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
                 Gender
               </Text>
               <Controller
@@ -299,13 +272,9 @@ export default function PersonalInfoScreen() {
                 render={({ field: { value, onChange } }) => (
                   <>
                     <Pressable onPress={() => setGenderOpen((s) => !s)}>
-                      <View
-                        className={`h-[48px] flex-row items-center rounded-[8px] border px-[12px] ${
-                          isDark ? 'border-[#2F343A] bg-[#15191E]' : 'border-gray-300 bg-gray-50'
-                        }`}
-                      >
+                      <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
                         <Feather name="user" size={18} color="#9CA3AF" />
-                        <Text className={`flex-1 px-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        <Text className="flex-1 px-2 text-gray-900 dark:text-white">
                           {value || 'Select Gender'}
                         </Text>
                         <Feather
@@ -319,13 +288,7 @@ export default function PersonalInfoScreen() {
                       <Animated.View
                         entering={FadeIn.duration(300)}
                         exiting={FadeOut.duration(200)}
-                        style={{
-                          backgroundColor: isDark ? '#15191E' : '#F3F4F6',
-                          borderRadius: 8,
-                          marginTop: 4,
-                          borderWidth: 1,
-                          borderColor: isDark ? '#2F343A' : '#E5E7EB',
-                        }}
+                        className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]"
                       >
                         {genderOptions.map((g) => (
                           <Pressable
@@ -334,22 +297,14 @@ export default function PersonalInfoScreen() {
                               onChange(g);
                               setGenderOpen(false);
                             }}
-                            style={{
-                              paddingVertical: 10,
-                              paddingHorizontal: 12,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 8,
-                            }}
+                            className="flex-row items-center gap-2 px-3 py-2"
                           >
                             <Feather
                               name={value === g ? 'check-square' : 'square'}
                               size={18}
-                              color={value === g ? '#1ED28A' : isDark ? '#9CA3AF' : '#6B7280'}
+                              color={value === g ? '#1ED28A' : '#9CA3AF'}
                             />
-                            <Text style={{ color: isDark ? '#FFF' : '#111827', fontSize: 14 }}>
-                              {g}
-                            </Text>
+                            <Text className="text-[14px] text-gray-900 dark:text-white">{g}</Text>
                           </Pressable>
                         ))}
                       </Animated.View>
@@ -359,22 +314,17 @@ export default function PersonalInfoScreen() {
               />
             </View>
 
+
             <View className="mt-4">
-              <Text
-                className={`mb-2 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
-              >
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
                 Location
               </Text>
               <Controller
                 control={control}
                 name="location"
-                render={({ field: { value, onChange } }) => (
+                render={({ field: { onChange } }) => (
                   <>
-                    <View
-                      className={`h-[48px] flex-row items-center rounded-[8px] border px-[12px] ${
-                        isDark ? 'border-[#2F343A] bg-[#15191E]' : 'border-gray-300 bg-gray-50'
-                      }`}
-                    >
+                    <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
                       <Feather name="map-pin" size={18} color="#9CA3AF" />
                       <TextInput
                         value={query}
@@ -384,12 +334,12 @@ export default function PersonalInfoScreen() {
                         }}
                         placeholder="Type to search location"
                         placeholderTextColor="#9CA3AF"
-                        className={`flex-1 px-2 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                        className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
                       />
                     </View>
 
                     {loadingSuggestions ? (
-                      <View style={{ paddingVertical: 10 }}>
+                      <View className="py-3">
                         <ActivityIndicator color="#1ED28A" />
                       </View>
                     ) : (
@@ -397,13 +347,7 @@ export default function PersonalInfoScreen() {
                         <Animated.View
                           entering={FadeIn.duration(300)}
                           exiting={FadeOut.duration(200)}
-                          style={{
-                            backgroundColor: isDark ? '#15191E' : '#F3F4F6',
-                            borderRadius: 8,
-                            marginTop: 4,
-                            borderWidth: 1,
-                            borderColor: isDark ? '#2F343A' : '#E5E7EB',
-                          }}
+                          className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]"
                         >
                           {suggestions.map((item) => (
                             <Pressable
@@ -413,14 +357,9 @@ export default function PersonalInfoScreen() {
                                 setQuery(item.description);
                                 setSuggestions([]);
                               }}
-                              style={{ paddingVertical: 10, paddingHorizontal: 12 }}
+                              className="px-3 py-2"
                             >
-                              <Text
-                                style={{
-                                  color: isDark ? '#FFF' : '#111827',
-                                  fontSize: 14,
-                                }}
-                              >
+                              <Text className="text-[14px] text-gray-900 dark:text-white">
                                 {item.description}
                               </Text>
                             </Pressable>
@@ -433,10 +372,9 @@ export default function PersonalInfoScreen() {
               />
             </View>
 
+
             <View className="mt-6">
-              <Text
-                className={`mb-3 text-[14px] font-[500] ${isDark ? 'text-white' : 'text-gray-900'}`}
-              >
+              <Text className="mb-3 text-[14px] font-[500] text-gray-900 dark:text-white">
                 Account Type
               </Text>
               <View className="flex-row gap-3">
@@ -450,28 +388,18 @@ export default function PersonalInfoScreen() {
                       return (
                         <Pressable
                           onPress={() => onChange(role)}
-                          className={`h-[44px] flex-1 items-center justify-center rounded-[20px] border ${
+                          className={`h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-[20px] border ${
                             selected
                               ? 'border-[#1ED28A] bg-[#1ED28A]/10'
-                              : isDark
-                                ? 'border-[#2F343A] bg-[#15191E]'
-                                : 'border-gray-300 bg-gray-50'
+                              : 'border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]'
                           }`}
-                          style={{ flexDirection: 'row', gap: 8 }}
                         >
                           <Checkbox
                             value={selected}
                             onValueChange={() => onChange(role)}
-                            color={isDark ? '#10B981' : undefined}
-                            className={`${
-                              isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'
-                            } ${isDark ? 'border-text-secondaryLight' : 'border-button-buttonLight'}`}
+                            color="#10B981"
                           />
-                          <Text
-                            className={`text-[14px] font-[500] ${
-                              isDark ? 'text-white' : 'text-gray-900'
-                            }`}
-                          >
+                          <Text className="text-[14px] font-[500] text-gray-900 dark:text-white">
                             {role === 'doctor' ? 'Physician' : 'Patient'}
                           </Text>
                         </Pressable>
@@ -482,7 +410,7 @@ export default function PersonalInfoScreen() {
               </View>
             </View>
 
-            <View className="mb-8 mt-10 items-center">
+            <View className="items-center mt-10 mb-8">
               <ButtonComponent
                 title="Continue"
                 onPress={handleSubmit(onSubmit)}
@@ -494,8 +422,6 @@ export default function PersonalInfoScreen() {
           </View>
         </ScrollView>
       </Animated.View>
-
-      {/* toast Rendered here. we might opt for global toast later */}
       <Toast />
     </>
   );

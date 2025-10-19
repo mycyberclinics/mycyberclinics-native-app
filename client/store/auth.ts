@@ -7,13 +7,16 @@ import {
   createUserWithEmailAndPassword,
   signOut as fbSignOut,
   onAuthStateChanged,
+  onIdTokenChanged,
 } from 'firebase/auth';
 import api from '@/lib/api/client';
 import { BackendUserSchema, BackendUser } from '@/lib/schemas/user';
+import * as SecureStore from 'expo-secure-store';
 
 type AppUser = any;
 
 type AuthState = {
+  token: string | null;
   user: AppUser | null;
   profile: BackendUser | null;
   initializing: boolean;
@@ -45,9 +48,12 @@ type AuthState = {
   rehydrate: () => Promise<void>;
 };
 
+const TOKEN_KEY = 'mc_firebase_id_token';
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
+      token: null,
       user: null,
       profile: null,
       initializing: true,
@@ -76,6 +82,10 @@ export const useAuthStore = create<AuthState>()(
           const auth = getFirebaseAuth();
           const cred = await createUserWithEmailAndPassword(auth, email, password);
           const { uid, email: em } = cred.user;
+
+          const token = await cred.user.getIdToken();
+          await SecureStore.setItemAsync(TOKEN_KEY, token);
+          console.log('[AUTH] Sign-up successful:', uid);
 
           // sync with backend
           try {
@@ -109,8 +119,14 @@ export const useAuthStore = create<AuthState>()(
           set({ loading: true, error: null });
           const auth = getFirebaseAuth();
           const cred = await signInWithEmailAndPassword(auth, email, password);
+
+          const token = await cred.user.getIdToken();
+          await SecureStore.setItemAsync(TOKEN_KEY, token);
+          console.log('[AUTH] Sign-up successful:', email);
+
           set({ user: cred.user, loading: false });
           await get().loadProfile();
+
           console.log('[AUTH] Sign-in successful:', cred.user.uid);
         } catch (err: any) {
           console.error('[AUTH] signIn error:', err.message);
@@ -159,6 +175,7 @@ export const useAuthStore = create<AuthState>()(
           const auth = getFirebaseAuth();
           await fbSignOut(auth);
           set({
+            token: null,
             user: null,
             profile: null,
             onboarding: false,
@@ -199,8 +216,26 @@ export const useAuthStore = create<AuthState>()(
               });
             }
 
+            if (!firebaseUser && get().tempEmail && get().tempPassword) {
+              const auth = getFirebaseAuth();
+              const cred = await signInWithEmailAndPassword(
+                auth,
+                get().tempEmail as string, // remember this coulc be null
+                get().tempPassword as string, // remember this coulc be null
+              );
+              set({ user: cred.user });
+              console.log('[AUTH] Silent sign-in successful');
+            }
+
             set({ initializing: false });
             resolve();
+          });
+
+          onIdTokenChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+              const token = await firebaseUser.getIdToken();
+              await SecureStore.setItemAsync('mc_firebase_id_token', token);
+            }
           });
         });
       },

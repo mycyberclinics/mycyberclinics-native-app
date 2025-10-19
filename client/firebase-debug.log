@@ -1,68 +1,67 @@
-[debug] [2025-10-18T11:12:10.298Z] ----------------------------------------------------------------------
-[debug] [2025-10-18T11:12:10.306Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\chike\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start
-[debug] [2025-10-18T11:12:10.306Z] CLI Version:   14.20.0
-[debug] [2025-10-18T11:12:10.306Z] Platform:      win32
-[debug] [2025-10-18T11:12:10.306Z] Node Version:  v22.12.0
-[debug] [2025-10-18T11:12:10.307Z] Time:          Sat Oct 18 2025 12:12:10 GMT+0100 (West Africa Standard Time)
-[debug] [2025-10-18T11:12:10.307Z] ----------------------------------------------------------------------
+[debug] [2025-10-19T10:07:49.967Z] ----------------------------------------------------------------------
+[debug] [2025-10-19T10:07:49.970Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\chike\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start
+[debug] [2025-10-19T10:07:49.970Z] CLI Version:   14.20.0
+[debug] [2025-10-19T10:07:49.970Z] Platform:      win32
+[debug] [2025-10-19T10:07:49.970Z] Node Version:  v22.12.0
+[debug] [2025-10-19T10:07:49.971Z] Time:          Sun Oct 19 2025 11:07:49 GMT+0100 (West Africa Standard Time)
+[debug] [2025-10-19T10:07:49.971Z] ----------------------------------------------------------------------
 [debug] 
-[debug] [2025-10-18T11:12:10.536Z] Object "/emulators" in "firebase.json" has unknown property: {"additionalProperty":"emulatorsPersistence"}
-[debug] [2025-10-18T11:12:10.557Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-10-19T10:07:50.318Z] Object "/emulators" in "firebase.json" has unknown property: {"additionalProperty":"emulatorsPersistence"}
+[debug] [2025-10-19T10:07:50.324Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
 [debug] Failed to authenticate, have you run firebase login?
 [warn] !  emulators: You are not currently authenticated so some features may not work correctly. Please run firebase login to authenticate the CLI. 
-[debug] [2025-10-18T11:12:10.703Z] java version "25" 2025-09-16 LTS
+[debug] [2025-10-19T10:07:50.479Z] java version "25" 2025-09-16 LTS
+Java(TM) SE Runtime Environment (build 25+37-LTS-3491)
 
-[debug] [2025-10-18T11:12:10.704Z] Java(TM) SE Runtime Environment (build 25+37-LTS-3491)
-Java HotSpot(TM) 64-Bit Server VM (build 25+37-LTS-3491, mixed mode, sharing)
+[debug] [2025-10-19T10:07:50.479Z] Java HotSpot(TM) 64-Bit Server VM (build 25+37-LTS-3491, mixed mode, sharing)
 
-[debug] [2025-10-18T11:12:10.716Z] Parsed Java major version: 25
+[debug] [2025-10-19T10:07:50.492Z] Parsed Java major version: 25
 [info] i  emulators: Starting emulators: auth, functions, firestore, storage, extensions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth, functions, firestore, storage, extensions"}}
-[debug] [2025-10-18T11:12:10.718Z] No OAuth tokens found
-[debug] [2025-10-18T11:12:10.718Z] No OAuth tokens found
-[debug] [2025-10-18T11:12:10.718Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2025-10-18T11:12:10.718Z] Unable to check that https://cloudresourcemanager.googleapis.com is enabled on mycyberclinics-app. Calls to it will fail if it is not enabled
-[debug] [2025-10-18T11:12:10.719Z] No OAuth tokens found
-[debug] [2025-10-18T11:12:10.719Z] No OAuth tokens found
-[debug] [2025-10-18T11:12:10.719Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-10-19T10:07:50.495Z] No OAuth tokens found
+[debug] [2025-10-19T10:07:50.495Z] No OAuth tokens found
+[debug] [2025-10-19T10:07:50.495Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-10-19T10:07:50.495Z] Unable to check that https://cloudresourcemanager.googleapis.com is enabled on mycyberclinics-app. Calls to it will fail if it is not enabled
+[debug] [2025-10-19T10:07:50.496Z] No OAuth tokens found
+[debug] [2025-10-19T10:07:50.496Z] No OAuth tokens found
+[debug] [2025-10-19T10:07:50.496Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
 [error] !!  extensions: Unable to look up project number for mycyberclinics-app.
  If this is a real project, ensure that you are logged in and have access to it.
  If this is a fake project, please use a project ID starting with 'demo-' to skip production calls.
  Continuing with a fake project number - secrets and other features that require production access may behave unexpectedly. {"metadata":{"emulator":{"name":"extensions"},"message":"Unable to look up project number for mycyberclinics-app.\n If this is a real project, ensure that you are logged in and have access to it.\n If this is a fake project, please use a project ID starting with 'demo-' to skip production calls.\n Continuing with a fake project number - secrets and other features that require production access may behave unexpectedly."}}
-[debug] [2025-10-18T11:12:10.735Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2025-10-18T11:12:10.735Z] [firestore] Firestore Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2025-10-18T11:12:10.735Z] [firestore.websocket] websocket server for firestore only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2025-10-18T11:12:10.735Z] [storage] Storage Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2025-10-18T11:12:10.735Z] assigned listening specs for emulators {"user":{"auth":[{"address":"0.0.0.0","family":"IPv4","port":9099}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"storage":[{"address":"127.0.0.1","family":"IPv4","port":9199}]},"metadata":{"message":"assigned listening specs for emulators"}}
-[debug] [2025-10-18T11:12:10.739Z] Emulator locator file path: C:\Users\chike\AppData\Local\Temp\hub-mycyberclinics-app.json
-[warn] !  emulators: It seems that you are running multiple instances of the emulator suite for project mycyberclinics-app. This may result in unexpected behavior. 
-[debug] [2025-10-18T11:12:10.740Z] [hub] writing locator at C:\Users\chike\AppData\Local\Temp\hub-mycyberclinics-app.json
-[debug] [2025-10-18T11:12:10.749Z] [Extensions] Started Extensions emulator, this is a noop.
-[debug] [2025-10-18T11:12:10.755Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2025-10-18T11:12:10.755Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2025-10-18T11:12:10.756Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
-[debug] [2025-10-18T11:12:10.756Z] late-assigned ports for functions and eventarc emulators {"user":{"auth":[{"address":"0.0.0.0","family":"IPv4","port":9099}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"storage":[{"address":"127.0.0.1","family":"IPv4","port":9199}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[debug] [2025-10-19T10:07:50.513Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-10-19T10:07:50.513Z] [firestore] Firestore Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-10-19T10:07:50.513Z] [firestore.websocket] websocket server for firestore only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-10-19T10:07:50.513Z] [storage] Storage Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-10-19T10:07:50.514Z] assigned listening specs for emulators {"user":{"auth":[{"address":"0.0.0.0","family":"IPv4","port":9099}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"storage":[{"address":"127.0.0.1","family":"IPv4","port":9199}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-10-19T10:07:50.520Z] Emulator locator file path: C:\Users\chike\AppData\Local\Temp\hub-mycyberclinics-app.json
+[debug] [2025-10-19T10:07:50.520Z] [hub] writing locator at C:\Users\chike\AppData\Local\Temp\hub-mycyberclinics-app.json
+[debug] [2025-10-19T10:07:50.533Z] [Extensions] Started Extensions emulator, this is a noop.
+[debug] [2025-10-19T10:07:50.541Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-10-19T10:07:50.541Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-10-19T10:07:50.541Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-10-19T10:07:50.541Z] late-assigned ports for functions and eventarc emulators {"user":{"auth":[{"address":"0.0.0.0","family":"IPv4","port":9099}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"storage":[{"address":"127.0.0.1","family":"IPv4","port":9199}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
 [warn] !  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, database, hosting, pubsub, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, database, hosting, pubsub, dataconnect\u001b[22m"}}
-[debug] [2025-10-18T11:12:10.758Z] No OAuth tokens found
-[debug] [2025-10-18T11:12:10.759Z] No OAuth tokens found
-[debug] [2025-10-18T11:12:10.759Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2025-10-18T11:12:10.759Z] Failed to get Admin SDK config for mycyberclinics-app, falling back to cache Failed to get Admin SDK for Firebase project mycyberclinics-app. Please make sure the project exists and your account has permission to access it. {"name":"FirebaseError","children":[],"exit":2,"message":"Failed to get Admin SDK for Firebase project mycyberclinics-app. Please make sure the project exists and your account has permission to access it.","original":{"name":"FirebaseError","children":[],"exit":1,"message":"Failed to authenticate, have you run \u001b[1mfirebase login\u001b[22m?","original":{},"status":500},"status":500}
+[debug] [2025-10-19T10:07:50.543Z] No OAuth tokens found
+[debug] [2025-10-19T10:07:50.544Z] No OAuth tokens found
+[debug] [2025-10-19T10:07:50.544Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-10-19T10:07:50.544Z] Failed to get Admin SDK config for mycyberclinics-app, falling back to cache Failed to get Admin SDK for Firebase project mycyberclinics-app. Please make sure the project exists and your account has permission to access it. {"name":"FirebaseError","children":[],"exit":2,"message":"Failed to get Admin SDK for Firebase project mycyberclinics-app. Please make sure the project exists and your account has permission to access it.","original":{"name":"FirebaseError","children":[],"exit":1,"message":"Failed to authenticate, have you run \u001b[1mfirebase login\u001b[22m?","original":{},"status":500},"status":500}
 [warn] !  functions: Unable to fetch project Admin SDK configuration, Admin SDK behavior in Cloud Functions emulator may be incorrect. {"metadata":{"emulator":{"name":"functions"},"message":"Unable to fetch project Admin SDK configuration, Admin SDK behavior in Cloud Functions emulator may be incorrect."}}
-[debug] [2025-10-18T11:12:10.785Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: auto_download"}}
-[debug] [2025-10-18T11:12:10.785Z] Ignoring unsupported arg: single_project_mode_error {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: single_project_mode_error"}}
-[debug] [2025-10-18T11:12:10.785Z] Starting Firestore Emulator with command {"binary":"java","args":["-Dgoogle.cloud_firestore.debug_log_level=FINE","-Duser.language=en","-jar","C:\\Users\\chike\\.cache\\firebase\\emulators\\cloud-firestore-emulator-v1.19.8.jar","--host","127.0.0.1","--port",8080,"--websocket_port",9150,"--project_id","mycyberclinics-app","--rules","D:\\Dev\\mycyberclinics\\mycyberclinics-native-app\\client\\firestore.rules","--single_project_mode",true,"--functions_emulator","127.0.0.1:5001"],"optionalArgs":["port","webchannel_port","host","rules","websocket_port","functions_emulator","seed_from_export","project_id","single_project_mode"],"joinArgs":false,"shell":false,"port":8080} {"metadata":{"emulator":{"name":"firestore"},"message":"Starting Firestore Emulator with command {\"binary\":\"java\",\"args\":[\"-Dgoogle.cloud_firestore.debug_log_level=FINE\",\"-Duser.language=en\",\"-jar\",\"C:\\\\Users\\\\chike\\\\.cache\\\\firebase\\\\emulators\\\\cloud-firestore-emulator-v1.19.8.jar\",\"--host\",\"127.0.0.1\",\"--port\",8080,\"--websocket_port\",9150,\"--project_id\",\"mycyberclinics-app\",\"--rules\",\"D:\\\\Dev\\\\mycyberclinics\\\\mycyberclinics-native-app\\\\client\\\\firestore.rules\",\"--single_project_mode\",true,\"--functions_emulator\",\"127.0.0.1:5001\"],\"optionalArgs\":[\"port\",\"webchannel_port\",\"host\",\"rules\",\"websocket_port\",\"functions_emulator\",\"seed_from_export\",\"project_id\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":8080}"}}
+[debug] [2025-10-19T10:07:50.558Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-10-19T10:07:50.558Z] Ignoring unsupported arg: single_project_mode_error {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: single_project_mode_error"}}
+[debug] [2025-10-19T10:07:50.558Z] Starting Firestore Emulator with command {"binary":"java","args":["-Dgoogle.cloud_firestore.debug_log_level=FINE","-Duser.language=en","-jar","C:\\Users\\chike\\.cache\\firebase\\emulators\\cloud-firestore-emulator-v1.19.8.jar","--host","127.0.0.1","--port",8080,"--websocket_port",9150,"--project_id","mycyberclinics-app","--rules","D:\\Dev\\mycyberclinics\\mycyberclinics-native-app\\client\\firestore.rules","--single_project_mode",true,"--functions_emulator","127.0.0.1:5001"],"optionalArgs":["port","webchannel_port","host","rules","websocket_port","functions_emulator","seed_from_export","project_id","single_project_mode"],"joinArgs":false,"shell":false,"port":8080} {"metadata":{"emulator":{"name":"firestore"},"message":"Starting Firestore Emulator with command {\"binary\":\"java\",\"args\":[\"-Dgoogle.cloud_firestore.debug_log_level=FINE\",\"-Duser.language=en\",\"-jar\",\"C:\\\\Users\\\\chike\\\\.cache\\\\firebase\\\\emulators\\\\cloud-firestore-emulator-v1.19.8.jar\",\"--host\",\"127.0.0.1\",\"--port\",8080,\"--websocket_port\",9150,\"--project_id\",\"mycyberclinics-app\",\"--rules\",\"D:\\\\Dev\\\\mycyberclinics\\\\mycyberclinics-native-app\\\\client\\\\firestore.rules\",\"--single_project_mode\",true,\"--functions_emulator\",\"127.0.0.1:5001\"],\"optionalArgs\":[\"port\",\"webchannel_port\",\"host\",\"rules\",\"websocket_port\",\"functions_emulator\",\"seed_from_export\",\"project_id\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":8080}"}}
 [info] i  firestore: Firestore Emulator logging to firestore-debug.log {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator logging to \u001b[1mfirestore-debug.log\u001b[22m"}}
 [info] +  firestore: Firestore Emulator UI websocket is running on 9150. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator UI websocket is running on 9150."}}
-[debug] [2025-10-18T11:12:18.311Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"storage"},"message":"Ignoring unsupported arg: port"}}
+[debug] [2025-10-19T10:07:59.903Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"storage"},"message":"Ignoring unsupported arg: port"}}
 [warn] !  Unexpected rules runtime error: WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
 WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.google.protobuf.UnsafeUtil$MemoryAccessor (file:/C:/Users/chike/.cache/firebase/emulators/cloud-storage-rules-runtime-v1.1.3.jar)
 WARNING: Please consider reporting this to the maintainers of class com.google.protobuf.UnsafeUtil$MemoryAccessor
 WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
  {"metadata":{"emulator":{"name":"storage"},"message":"Unexpected rules runtime error: WARNING: A terminally deprecated method in sun.misc.Unsafe has been called\nWARNING: sun.misc.Unsafe::arrayBaseOffset has been called by com.google.protobuf.UnsafeUtil$MemoryAccessor (file:/C:/Users/chike/.cache/firebase/emulators/cloud-storage-rules-runtime-v1.1.3.jar)\nWARNING: Please consider reporting this to the maintainers of class com.google.protobuf.UnsafeUtil$MemoryAccessor\nWARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release\r\n"}}
-[debug] [2025-10-18T11:12:19.142Z] Temp file directory for storage emulator: C:\Users\chike\AppData\Local\Temp/firebase/storage/blobs {"metadata":{"emulator":{"name":"storage"},"message":"Temp file directory for storage emulator: C:\\Users\\chike\\AppData\\Local\\Temp/firebase/storage/blobs"}}
-[debug] [2025-10-18T11:12:19.151Z] [Extensions] Connecting Extensions emulator, this is a noop.
+[debug] [2025-10-19T10:08:01.141Z] Temp file directory for storage emulator: C:\Users\chike\AppData\Local\Temp/firebase/storage/blobs {"metadata":{"emulator":{"name":"storage"},"message":"Temp file directory for storage emulator: C:\\Users\\chike\\AppData\\Local\\Temp/firebase/storage/blobs"}}
+[debug] [2025-10-19T10:08:01.150Z] [Extensions] Connecting Extensions emulator, this is a noop.
 [info] i  functions: Watching "D:\Dev\mycyberclinics\mycyberclinics-native-app\client\functions" for Cloud Functions... {"metadata":{"emulator":{"name":"functions"},"message":"Watching \"D:\\Dev\\mycyberclinics\\mycyberclinics-native-app\\client\\functions\" for Cloud Functions..."}}
-[debug] [2025-10-18T11:12:19.175Z] Validating nodejs source
-[debug] [2025-10-18T11:12:21.575Z] > [functions] package.json contents: {
+[debug] [2025-10-19T10:08:01.159Z] Validating nodejs source
+[debug] [2025-10-19T10:08:03.133Z] > [functions] package.json contents: {
   "name": "functions",
   "description": "Cloud Functions for Firebase",
   "scripts": {
@@ -88,15 +87,16 @@ WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
   },
   "private": true
 }
-[debug] [2025-10-18T11:12:21.575Z] Building nodejs source
-[debug] [2025-10-18T11:12:21.575Z] Failed to find version of module node: reached end of search path D:\Dev\mycyberclinics\mycyberclinics-native-app\client\functions\node_modules
+[debug] [2025-10-19T10:08:03.133Z] Building nodejs source
+[debug] [2025-10-19T10:08:03.134Z] Failed to find version of module node: reached end of search path D:\Dev\mycyberclinics\mycyberclinics-native-app\client\functions\node_modules
 [info] +  functions: Using node@22 from host. 
-[debug] [2025-10-18T11:12:21.577Z] Could not find functions.yaml. Must use http discovery
-[debug] [2025-10-18T11:12:21.629Z] Found firebase-functions binary at 'D:\Dev\mycyberclinics\mycyberclinics-native-app\client\functions\node_modules\.bin\firebase-functions'
-[info] Serving at port 8503
+[debug] [2025-10-19T10:08:03.137Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-10-19T10:08:03.151Z] Found firebase-functions binary at 'D:\Dev\mycyberclinics\mycyberclinics-native-app\client\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8039
 
-[error] !!  functions: Failed to load function definition from source: FirebaseError: User code failed to load. Cannot determine backend specification. Timeout after 10000. See https://firebase.google.com/docs/functions/tips#avoid_deployment_timeouts_during_initialization' {"metadata":{"emulator":{"name":"functions"},"message":"Failed to load function definition from source: FirebaseError: User code failed to load. Cannot determine backend specification. Timeout after 10000. See https://firebase.google.com/docs/functions/tips#avoid_deployment_timeouts_during_initialization'"}}
-[debug] [2025-10-18T11:12:42.215Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: connect ECONNREFUSED ::1:40001. If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[debug] [2025-10-19T10:08:10.599Z] Got response from /__/functions.yaml {"endpoints":{},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[info] +  functions: Loaded functions definitions from source: . {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: ."}}
+[debug] [2025-10-19T10:08:14.686Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: connect ECONNREFUSED ::1:40001. If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
 [info] 
 ┌─────────────────────────────────────────────────────────────┐
 │ ✔  All emulators ready! It is now safe to connect your app. │
@@ -123,30 +123,3 @@ WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
 └─────────────────────────┴───────────────┴─────────────────────┘
 Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
  
-[debug] [2025-10-18T16:46:00.293Z] >>> [apiv2][query] POST http://127.0.0.1:5001/functions/projects/mycyberclinics-app/trigger_multicast [none]
-[debug] [2025-10-18T16:46:00.299Z] >>> [apiv2][body] POST http://127.0.0.1:5001/functions/projects/mycyberclinics-app/trigger_multicast {"eventId":"c7135fd9-6760-44d3-a351-b41e121961f9","eventType":"providers/firebase.auth/eventTypes/user.create","resource":{"name":"projects/mycyberclinics-app","service":"firebaseauth.googleapis.com"},"params":{},"timestamp":"2025-10-18T16:46:00.287Z","data":{"uid":"Zj7SeSnYdl4JF2ZihdkIfSv5wVNg","email":"dikee5200@gmail.com","emailVerified":false,"metadata":{"creationTime":"2025-10-18T16:46:00.279Z","lastSignInTime":"2025-10-18T16:46:00.279Z"},"customClaims":{},"providerData":[{"rawId":"dikee5200@gmail.com","providerId":"password","email":"dikee5200@gmail.com","federatedId":"dikee5200@gmail.com"}]}}
-[debug] [2025-10-18T16:46:00.332Z] <<< [apiv2][status] POST http://127.0.0.1:5001/functions/projects/mycyberclinics-app/trigger_multicast 200
-[debug] [2025-10-18T16:46:00.333Z] <<< [apiv2][body] POST http://127.0.0.1:5001/functions/projects/mycyberclinics-app/trigger_multicast {"status":"multicast_acknowledged"}
-[warn] !  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web. {"metadata":{"emulator":{"name":"auth"},"message":"canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web."}}
-[info] i  To verify the email address dikee5200@gmail.com, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=to5m9Vv77dXZl1smnwjEUKAoA8NRymhzi0OfrXFmrglyYFWjciQ2AS&apiKey=fake-api-key&continueUrl=https%3A%2F%2Fmy-cyber-clinics-dev.firebaseapp.com%2Fverify {"metadata":{"emulator":{"name":"auth"},"message":"To verify the email address dikee5200@gmail.com, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=to5m9Vv77dXZl1smnwjEUKAoA8NRymhzi0OfrXFmrglyYFWjciQ2AS&apiKey=fake-api-key&continueUrl=https%3A%2F%2Fmy-cyber-clinics-dev.firebaseapp.com%2Fverify"}}
-[warn] !  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web. {"metadata":{"emulator":{"name":"auth"},"message":"canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web."}}
-[info] i  To verify the email address dikee5200@gmail.com, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=Ja6lzBDHFL7WzYB5yZhZcUkoGeaG-aEfYbZGCIiaGVYb1adDFkGLsB&apiKey=fake-api-key&continueUrl=https%3A%2F%2Fmy-cyber-clinics-dev.firebaseapp.com%2Fverify {"metadata":{"emulator":{"name":"auth"},"message":"To verify the email address dikee5200@gmail.com, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=Ja6lzBDHFL7WzYB5yZhZcUkoGeaG-aEfYbZGCIiaGVYb1adDFkGLsB&apiKey=fake-api-key&continueUrl=https%3A%2F%2Fmy-cyber-clinics-dev.firebaseapp.com%2Fverify"}}
-[warn] !  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web. {"metadata":{"emulator":{"name":"auth"},"message":"canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web."}}
-[info] i  To verify the email address dikee5200@gmail.com, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=tn0s2SE3ELperLw1HaVB7-1bKVC09IMPdZRjHB38TXflIdbvs_qoFl&apiKey=fake-api-key&continueUrl=https%3A%2F%2Fmy-cyber-clinics-dev.firebaseapp.com%2Fverify {"metadata":{"emulator":{"name":"auth"},"message":"To verify the email address dikee5200@gmail.com, follow this link: http://127.0.0.1:9099/emulator/action?mode=verifyEmail&lang=en&oobCode=tn0s2SE3ELperLw1HaVB7-1bKVC09IMPdZRjHB38TXflIdbvs_qoFl&apiKey=fake-api-key&continueUrl=https%3A%2F%2Fmy-cyber-clinics-dev.firebaseapp.com%2Fverify"}}
-[debug] [2025-10-18T16:49:25.743Z] No OAuth tokens found
-[debug] [2025-10-18T16:49:25.744Z] No OAuth tokens found
-[debug] [2025-10-18T16:49:25.744Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2025-10-18T16:49:25.746Z] Failed to get Admin SDK config for mycyberclinics-app, falling back to cache Failed to get Admin SDK for Firebase project mycyberclinics-app. Please make sure the project exists and your account has permission to access it. {"name":"FirebaseError","children":[],"exit":2,"message":"Failed to get Admin SDK for Firebase project mycyberclinics-app. Please make sure the project exists and your account has permission to access it.","original":{"name":"FirebaseError","children":[],"exit":1,"message":"Failed to authenticate, have you run \u001b[1mfirebase login\u001b[22m?","original":{},"status":500},"status":500}
-[debug] [2025-10-18T19:19:44.485Z] Received signal SIGHUP 1
-[info]  
-[info] i  emulators: Received SIGHUP for the first time. Starting a clean shutdown. 
-[info] i  emulators: Please wait for a clean shutdown or send the SIGHUP signal again to stop right now. 
-[info] i  emulators: Shutting down emulators. {"metadata":{"emulator":{"name":"hub"},"message":"Shutting down emulators."}}
-[info] i  ui: Stopping Emulator UI {"metadata":{"emulator":{"name":"ui"},"message":"Stopping Emulator UI"}}
-[info] i  extensions: Stopping Extensions Emulator {"metadata":{"emulator":{"name":"extensions"},"message":"Stopping Extensions Emulator"}}
-[debug] [2025-10-18T19:19:44.510Z] [Extensions] Stopping Extensions emulator, this is a noop.
-[info] i  functions: Stopping Functions Emulator {"metadata":{"emulator":{"name":"functions"},"message":"Stopping Functions Emulator"}}
-[info] i  firestore: Stopping Firestore Emulator {"metadata":{"emulator":{"name":"firestore"},"message":"Stopping Firestore Emulator"}}
-[warn] !  Firestore Emulator has exited upon receiving signal: SIGINT 
-[info] i  auth: Stopping Authentication Emulator {"metadata":{"emulator":{"name":"auth"},"message":"Stopping Authentication Emulator"}}
-[info] i  storage: Stopping Storage Emulator {"metadata":{"emulator":{"name":"storage"},"message":"Stopping Storage Emulator"}}

@@ -3,13 +3,11 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   Pressable,
   ScrollView,
-  ActivityIndicator,
-  useColorScheme,
   Platform,
   useWindowDimensions,
+  useColorScheme,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -17,14 +15,14 @@ import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuthStore } from '@/store/auth';
 import { fetchProfile } from '@/lib/api/client';
+import ButtonComponent from '@/components/ButtonComponent';
 
 type FormValues = { email: string; password: string };
 
 export default function SignInScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const { width } = useWindowDimensions();
+  const colorScheme = useColorScheme();
 
   const {
     control,
@@ -79,7 +77,7 @@ export default function SignInScreen() {
       }}
     >
       <View
-        className={`  flex-1 items-center justify-center ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
+        className="flex-1 items-center justify-center bg-white dark:bg-[#0B0E11]"
         style={{
           flexDirection: isDesktop ? 'row' : 'column',
           alignItems: 'center',
@@ -90,7 +88,7 @@ export default function SignInScreen() {
         }}
       >
         <View
-          className={` h-full w-full justify-between  ${isDark ? 'bg-[#0B0E11]' : 'bg-white'}`}
+          className="h-full w-full justify-between bg-white dark:bg-[#0B0E11]"
           style={{
             maxWidth: isDesktop ? 480 : isTablet ? 420 : 360,
             width: '100%',
@@ -101,7 +99,7 @@ export default function SignInScreen() {
           }}
         >
           <View className="flex flex-col items-center justify-center gap-6">
-            <View className="mt-8 self-start">
+            <View className="self-start mt-8">
               <Pressable
                 onPress={() => {
                   if (router.canGoBack()) {
@@ -110,46 +108,34 @@ export default function SignInScreen() {
                     router.replace('/(onboarding)/onboardingScreen3');
                   }
                 }}
-                className={`flex h-[40px] w-[40px] items-center justify-center rounded-full ${
-                  isDark ? 'border border-[#2F343A] bg-[#15191E]' : 'bg-[#F3F4F6]'
-                }`}
+                className="dark:bg-misc-circleBtnDark flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder "
               >
-                <Feather name="arrow-left" size={22} color={isDark ? '#fff' : '#111827'} />
+                <Feather
+                  name="arrow-left"
+                  size={22}
+                  color={colorScheme === 'dark' ? '#F5F5F5' : '#111827'}
+                />
               </Pressable>
             </View>
 
-            <View className="h-auto w-full items-start justify-center gap-2">
-              <Text
-                className={`text-[28px] font-[700] leading-8 ${
-                  isDark ? 'text-text-secondaryTextDark' : 'text-text-textInverse'
-                }`}
-              >
+            <View className="items-start justify-center w-full h-auto gap-2">
+              <Text className="text-[28px] font-[700] leading-8 text-text-textInverse dark:text-text-secondaryTextDark">
                 {`Welcome Back, ${displayName}`}
               </Text>
-              <Text
-                className={`text-[16px] font-[400] leading-6 ${
-                  isDark ? 'text-text-secondaryDark' : 'text-text-secondaryLight'
-                }`}
-              >
+              <Text className="text-[16px] font-[400] leading-6 text-text-secondaryLight dark:text-text-secondaryDark">
                 Login to continue to enjoy Cyberclinic
               </Text>
             </View>
 
-            <Text
-              className={`self-start text-[14px] font-[500] ${
-                isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
-              }`}
-            >
+            <Text className="self-start text-[14px] font-[500] text-text-textInverse dark:text-text-primaryDark">
               Email
             </Text>
             <View
               className={`h-[48px] w-full flex-row items-center rounded-[4px] border px-[12px] ${
                 focusedField === 'email'
                   ? 'border-[#1ED28A]'
-                  : isDark
-                    ? 'border-text-secondaryLight'
-                    : 'border-button-buttonLight'
-              } ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'}`}
+                  : 'border-button-buttonLight dark:border-text-secondaryLight'
+              } bg-card-cardBGLight dark:bg-card-cardBG`}
             >
               <Feather name="mail" size={18} color="#9CA3AF" />
               <Controller
@@ -173,9 +159,7 @@ export default function SignInScreen() {
                     underlineColorAndroid="transparent"
                     selectionColor="transparent"
                     style={{ outlineStyle: 'none' }}
-                    className={`flex-1 border-0 px-2 py-3 ${
-                      isDark ? 'text-misc-placeholderTextDark' : 'text-misc-placeHolderTextLight'
-                    }`}
+                    className="flex-1 px-2 py-3 border-0 text-misc-placeHolderTextLight dark:text-misc-placeholderTextDark"
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                   />
@@ -186,21 +170,15 @@ export default function SignInScreen() {
               <Text className="mb-3 text-sm text-red-400">{errors.email.message}</Text>
             )}
 
-            <Text
-              className={`self-start text-[14px] font-[500] ${
-                isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
-              }`}
-            >
+            <Text className="self-start text-[14px] font-[500] text-text-textInverse dark:text-text-primaryDark">
               Password
             </Text>
             <View
               className={`h-[48px] w-full flex-row items-center justify-center rounded-[4px] border px-[12px] ${
                 focusedField === 'password'
                   ? 'border-[#1ED28A]'
-                  : isDark
-                    ? 'border-text-secondaryLight'
-                    : 'border-button-buttonLight'
-              } ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'}`}
+                  : 'border-button-buttonLight dark:border-text-secondaryLight'
+              } bg-card-cardBGLight dark:bg-card-cardBG`}
             >
               <Feather name="lock" size={18} color="#9CA3AF" />
               <Controller
@@ -220,7 +198,7 @@ export default function SignInScreen() {
                     underlineColorAndroid="transparent"
                     selectionColor="transparent"
                     style={{ outlineStyle: 'none' }}
-                    className={`flex-1 px-2 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                   />
@@ -234,69 +212,38 @@ export default function SignInScreen() {
               <Text className="mb-3 text-sm text-red-400">{errors.password.message}</Text>
             )}
 
-            <View className="mb-8 mt-2 flex-row items-center">
+            <View className="flex-row items-center mt-2 mb-8">
               <Checkbox
                 value={agreed}
                 onValueChange={setAgreed}
                 color={agreed ? '#10B981' : undefined}
-                className={`${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'} ${
-                  isDark ? 'border-text-secondaryLight' : 'border-button-buttonLight'
-                }`}
+                className="border-button-buttonLight bg-card-cardBGLight dark:border-text-secondaryLight dark:bg-card-cardBG"
               />
               <Text
-                className={`ml-2 flex-shrink text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                className="flex-shrink ml-2 text-sm text-gray-600 dark:text-gray-400"
                 style={{ maxWidth: isDesktop ? 420 : '100%' }}
               >
-                I agree to the <Text className="text-emerald-500">terms of service</Text> and{' '}
+                I agree to the <Text className="text-emerald-500">terms of service</Text> and
                 <Text className="text-emerald-500">privacy policy</Text> of cyberclinics
               </Text>
             </View>
           </View>
 
-          <View className="mb-10 items-center justify-center gap-6">
-            <TouchableOpacity
-              disabled={isSubmitting}
+          <View className="items-center justify-center gap-6 mb-10">
+            <ButtonComponent
+              title="Sign in"
               onPress={handleSubmit(onSubmit)}
-              className={`flex h-[48px] w-[328px] items-center justify-center rounded-full py-3 ${
-                isDark
-                  ? 'border-button-signInButtonBorderDark'
-                  : 'border-button-signInButtonBorderLight'
-              } ${
-                agreed
-                  ? 'bg-button-buttonBG'
-                  : isDark
-                    ? 'bg-button-buttonBG'
-                    : 'bg-button-buttonBGLight'
-              }`}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text
-                  className={`text-center text-[14px] font-[500] ${
-                    isDark ? 'text-text-textInverse' : 'text-text-secondaryTextDark'
-                  }`}
-                >
-                  Sign in
-                </Text>
-              )}
-            </TouchableOpacity>
+              loading={isSubmitting}
+              disabled={!agreed}
+            />
 
-            <View className="mx-auto flex-row justify-center">
-              <Text
-                className={`text-[14px] font-[500] ${
-                  isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
-                }`}
-              >
+            <View className="flex-row justify-center mx-auto">
+              <Text className="text-[14px] font-[500] text-text-primaryLight dark:text-text-primaryDark">
                 {"Don't have an account? "}
               </Text>
               <Pressable onPress={() => router.push('/(auth)/signup/emailPassword')}>
-                <Text
-                  className={`text-[14px] font-[500] text-emerald-500 ${
-                    loading ? 'Wait...' : 'Sign Up'
-                  }`}
-                >
-                  Sign up
+                <Text className="text-[14px] font-[500] text-emerald-500">
+                  {loading ? 'Wait...' : 'Sign up'}
                 </Text>
               </Pressable>
             </View>

@@ -1,14 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  useColorScheme,
-  ActivityIndicator,
-  Pressable,
-} from 'react-native';
+import { View, Text, TextInput, ScrollView, useColorScheme, Pressable } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,8 +10,9 @@ import { getFirebaseAuth } from '@/lib/firebase';
 import { sendEmailVerification } from 'firebase/auth';
 import { SignupFormSchema } from '@/lib/schemas/user';
 import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
+import ButtonComponent from '@/components/ButtonComponent';
 
-// Use Hosting domain when ready. .env has the link btw
+// Firebase dynamic link settings
 const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
   url: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN_DYNAMIC_LINK as string,
   handleCodeInApp: true,
@@ -28,7 +20,6 @@ const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
   android: { packageName: 'com.mycyberclinics.app', installApp: true },
 };
 
-// confirmPassword must match password; password auto-filled from previous screen
 const Step3Schema = SignupFormSchema.extend({
   confirmPassword: z.string().min(1, 'Please confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -42,10 +33,8 @@ export default function ConfirmPasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   useTrackOnboardingStep();
-
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const router = useRouter();
+  const colorScheme = useColorScheme();
 
   const { tempEmail, tempPassword, setTempPassword, loading } = useAuthStore();
 
@@ -63,14 +52,13 @@ export default function ConfirmPasswordScreen() {
     },
   });
 
-  // Prefill email and temp password
+  // Prefill from temp values
   useEffect(() => {
     if (tempEmail) setValue('email', tempEmail);
     if (tempPassword) setValue('password', tempPassword);
   }, [tempEmail, tempPassword, setValue]);
 
-  // When confirmed password is submitted, this should save it as the real password
-  // and trigger email verification link
+  // Submit: confirm password + send verification
   const onSubmit = async (data: FormValues) => {
     setTempPassword(data.confirmPassword);
 
@@ -93,69 +81,54 @@ export default function ConfirmPasswordScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-      <View
-        className={`h-auto w-full flex-1 justify-between px-6 ${
-          isDark ? 'bg-bodyBG' : 'bg-card-cardBGLight'
-        }`}
-      >
+      <View className="justify-between flex-1 px-6 bg-card-cardBGLight dark:bg-bodyBG">
         <View>
           <View className="mt-8">
             <Pressable
               onPress={() => {
-                if (router.canGoBack()) router.back();
-                else router.replace('/(onboarding)/onboardingScreen3');
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(auth)/signup/verifyPassword');
+                }
               }}
-              className={`flex h-[40px] w-[40px] items-center justify-center rounded-full ${
-                isDark ? 'border border-[#2F343A] bg-[#15191E]' : 'bg-[#F3F4F6]'
-              }`}
+              className="dark:bg-misc-circleBtnDark flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder "
             >
-              <Feather name="arrow-left" size={22} color={isDark ? '#fff' : '#111827'} />
+              <Feather
+                name="arrow-left"
+                size={22}
+                color={colorScheme === 'dark' ? '#F5F5F5' : '#111827'}
+              />
             </Pressable>
           </View>
 
           <View className="mt-4 mb-6">
-            <Text
-              className={`text-[14px] font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-            >
+            <Text className="text-[14px] font-medium text-gray-700 dark:text-gray-300">
               Step 3 of 7
             </Text>
-            <View className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-gray-200">
+            <View className="mt-2 h-[6px] w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
               <View className="h-[6px] rounded-full bg-[#1ED28A]" style={{ width: '42.82%' }} />
             </View>
           </View>
 
           <View className="flex flex-col gap-4 mb-4">
-            <Text
-              className={`text-[24px] font-[700] ${
-                isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
-              }`}
-            >
+            <Text className="text-[24px] font-[700] text-text-primaryLight dark:text-text-primaryDark">
               Welcome To Cyberclinics
             </Text>
-            <Text
-              className={`text-[14px] ${
-                isDark ? 'text-text-secondaryDark' : 'text-text-secondaryLight'
-              }`}
-            >
+            <Text className="text-[14px] text-text-secondaryLight dark:text-text-secondaryDark">
               Enjoy the full benefits and offers of Cyberclinic
             </Text>
           </View>
 
-          <Text
-            className={`mb-3 mt-6 text-[14px] font-[500] ${
-              isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
-            }`}
-          >
+          <Text className="mb-3 mt-6 text-[14px] font-[500] text-text-textInverse dark:text-text-primaryDark">
             Email
           </Text>
           <View
             className={`h-[40px] w-full flex-row items-center rounded-[4px] border px-[12px] ${
               focusedField === 'email'
                 ? 'border-[#1ED28A]'
-                : isDark
-                  ? 'border-text-secondaryLight'
-                  : 'border-button-buttonLight'
-            } ${isDark ? 'bg-card-cardBG' : 'bg-card-cardBGLight'}`}
+                : 'border-button-buttonLight dark:border-text-secondaryLight'
+            } bg-card-cardBGLight dark:bg-card-cardBG`}
           >
             <Feather name="mail" size={18} color="#9CA3AF" />
             <Controller
@@ -167,29 +140,21 @@ export default function ConfirmPasswordScreen() {
                   editable={false}
                   placeholder="Email"
                   placeholderTextColor="#9CA3AF"
-                  className={`flex-1 px-2 py-3 ${
-                    isDark ? 'text-misc-placeholderTextDark' : 'text-misc-placeHolderTextLight'
-                  }`}
+                  className="flex-1 px-2 py-3 text-misc-placeHolderTextLight dark:text-misc-placeholderTextDark"
                 />
               )}
             />
           </View>
 
           <View className="mt-6">
-            <Text
-              className={`mb-3 text-[14px] font-[500] ${
-                isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
-              }`}
-            >
+            <Text className="mb-3 text-[14px] font-[500] text-text-textInverse dark:text-text-primaryDark">
               Password
             </Text>
             <View
               className={`h-[48px] flex-row items-center rounded-[4px] border px-[12px] ${
                 focusedField === 'password'
                   ? 'border-[#1ED28A]'
-                  : isDark
-                    ? 'border-gray-700 bg-[#15191E]'
-                    : 'border-gray-300 bg-gray-50'
+                  : 'border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-[#15191E]'
               }`}
             >
               <Feather name="lock" size={18} color="#9CA3AF" />
@@ -203,7 +168,7 @@ export default function ConfirmPasswordScreen() {
                     secureTextEntry
                     placeholder="Password"
                     placeholderTextColor="#9CA3AF"
-                    className={`flex-1 px-2 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
                   />
                 )}
               />
@@ -211,20 +176,14 @@ export default function ConfirmPasswordScreen() {
           </View>
 
           <View className="mt-6">
-            <Text
-              className={`mb-3 text-[14px] font-[500] ${
-                isDark ? 'text-text-primaryDark' : 'text-text-textInverse'
-              }`}
-            >
+            <Text className="mb-3 text-[14px] font-[500] text-text-textInverse dark:text-text-primaryDark">
               Re-enter Password
             </Text>
             <View
               className={`h-[48px] flex-row items-center rounded-[4px] border px-[12px] ${
                 focusedField === 'confirmPassword'
                   ? 'border-[#1ED28A]'
-                  : isDark
-                    ? 'border-gray-700 bg-[#15191E]'
-                    : 'border-gray-300 bg-gray-50'
+                  : 'border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-[#15191E]'
               }`}
             >
               <Feather name="lock" size={18} color="#9CA3AF" />
@@ -238,7 +197,7 @@ export default function ConfirmPasswordScreen() {
                     placeholder="Re-enter your password"
                     placeholderTextColor="#9CA3AF"
                     secureTextEntry={!showPassword}
-                    className={`flex-1 px-2 py-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
                     onFocus={() => setFocusedField('confirmPassword')}
                     onBlur={() => setFocusedField(null)}
                   />
@@ -253,34 +212,23 @@ export default function ConfirmPasswordScreen() {
             )}
           </View>
         </View>
-      </View>
-
-      <View className="items-center justify-center gap-6 mb-10">
-        <View className="items-center">
-          <TouchableOpacity
-            disabled={isSubmitting || loading}
+        <View className="items-center justify-center gap-6 mb-10">
+          <ButtonComponent
+            title="Continue"
             onPress={handleSubmit(onSubmit)}
-            className="flex h-[48px] w-[328px] items-center justify-center rounded-full bg-[#1ED28A]"
-          >
-            {isSubmitting || loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-[14px] font-[600] text-white">Continue</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            loading={isSubmitting || loading}
+            disabled={isSubmitting || loading}
+            style={{ width: 328 }}
+          />
 
-        <View className="flex-row justify-center mx-auto">
-          <Text
-            className={`text-[14px] font-[500] ${
-              isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'
-            }`}
-          >
-            Already have an account?
-          </Text>
-          <Pressable onPress={() => router.push('/(auth)/signIn')}>
-            <Text className="text-[14px] font-[500] text-emerald-500"> Sign in</Text>
-          </Pressable>
+          <View className="flex-row justify-center mx-auto">
+            <Text className="text-[14px] font-[500] text-text-primaryLight dark:text-text-primaryDark">
+              Already have an account?
+            </Text>
+            <Pressable onPress={() => router.push('/(auth)/signIn')}>
+              <Text className="text-[14px] font-[500] text-emerald-500"> Sign in</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </ScrollView>
