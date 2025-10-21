@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import ButtonComponent from '@/components/ButtonComponent';
+import { useAuthStore } from '@/store/auth';
+import { useRouter } from 'expo-router';
 
 type ScreenProps = {
   onNext: () => void;
@@ -29,6 +31,16 @@ export default function OnboardingScreen3({
   totalScreens,
 }: ScreenProps) {
   const { width } = useWindowDimensions();
+  const { setOnboardingComplete } = useAuthStore();
+  const router = useRouter();
+
+  function handleFinishOnboarding() {
+    // Mark onboarding complete + call parent onSignup + navigate
+    // monitor this for error
+    setOnboardingComplete();
+    if (onSignup) onSignup();
+    router.replace('/(auth)/signup/emailPassword');
+  }
 
   return (
     <ScrollView
@@ -48,7 +60,6 @@ export default function OnboardingScreen3({
         }}
       >
         <StatusBar style="auto" />
-
 
         <View className="h-[20px] w-full max-w-[328px] flex-row items-center justify-between">
           <View className="h-[4px] w-[52px] flex-row items-center gap-1">
@@ -82,7 +93,7 @@ export default function OnboardingScreen3({
         <View className="flex h-auto w-full max-w-[328px] flex-col items-center justify-center gap-[34px] py-4">
           <View className="flex flex-col items-center justify-center">
             <Text
-              className="w-[320px] text-center text-[28px] font-bold text-text-primaryLight md:text-[32px] dark:text-text-primaryDark"
+              className="w-[320px] text-center text-[28px] font-bold text-text-primaryLight dark:text-text-primaryDark md:text-[32px]"
               style={{ maxWidth: 340 }}
             >
               Your Path to Better Health Starts With Cyberclinics
@@ -96,17 +107,14 @@ export default function OnboardingScreen3({
             </Text>
           </View>
 
-
-          <View className="flex flex-col w-full gap-4 mb-6">
-
+          <View className="mb-6 flex w-full flex-col gap-4">
             <ButtonComponent
               title="Get Started With Cyberclinics"
-              onPress={onSignup}
+              onPress={handleFinishOnboarding}
               style={{
                 minWidth: width > 480 ? 300 : '100%',
               }}
             />
-
 
             <ButtonComponent
               title="Sign In"

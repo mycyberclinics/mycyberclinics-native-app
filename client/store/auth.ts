@@ -8,6 +8,7 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged,
   onIdTokenChanged,
+  // sendEmailVerification,
 } from 'firebase/auth';
 import api from '@/lib/api/client';
 import { BackendUserSchema, BackendUser } from '@/lib/schemas/user';
@@ -37,6 +38,8 @@ type AuthState = {
   setTempPassword: (password: string | null) => void;
   setOnboarding: (value: boolean) => void;
   setLastStep: (step: string | null) => void;
+  reset: () => void;
+  setOnboardingComplete: () => void;
 
   // actions
   signIn: (email: string, password: string) => Promise<void>;
@@ -57,7 +60,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       profile: null,
       initializing: true,
-      loading: false,
+      loading: true,
       error: null,
       tempEmail: null,
       tempPassword: null,
@@ -74,6 +77,8 @@ export const useAuthStore = create<AuthState>()(
       setTempPassword: (password) => set({ tempPassword: password }),
       setOnboarding: (value) => set({ onboarding: value }),
       setLastStep: (step) => set({ lastStep: step }),
+      reset: () => set({ user: null, lastStep: null, onboarding: true }),
+      setOnboardingComplete: () => set({ onboarding: false }),
 
       // signUp
       signUp: async (email, password) => {
@@ -86,6 +91,14 @@ export const useAuthStore = create<AuthState>()(
           const token = await cred.user.getIdToken();
           await SecureStore.setItemAsync(TOKEN_KEY, token);
           console.log('[AUTH] Sign-up successful:', uid);
+
+          // send verification email immediately
+          // try {
+          //   await sendEmailVerification(cred.user);
+          //   console.log('[AUTH] verification email sent');
+          // } catch (sendErr) {
+          //   console.warn('[AUTH] sendEmailVerification failed', sendErr);
+          // }
 
           // sync with backend
           try {
@@ -102,7 +115,7 @@ export const useAuthStore = create<AuthState>()(
             onboarding: true,
             loading: false,
             user: cred.user,
-            lastStep: '/(auth)/signup/emailPassword',
+            lastStep: '/(auth)/signup/verifyEmail',
           });
 
           return true;
@@ -202,7 +215,8 @@ export const useAuthStore = create<AuthState>()(
               await get().loadProfile();
               const profile = get().profile;
 
-              const onboardingNeeded = !profile || !profile.name || !profile.role || !profile.age;
+              const onboardingNeeded =
+                !profile || !profile.displayName || !profile.role || !profile.age;
 
               const { lastStep } = get();
               set({
@@ -220,7 +234,7 @@ export const useAuthStore = create<AuthState>()(
               const auth = getFirebaseAuth();
               const cred = await signInWithEmailAndPassword(
                 auth,
-                get().tempEmail as string, // remember this coulc be null
+                get().tempEmail as string, // remember this could be null
                 get().tempPassword as string, // remember this coulc be null
               );
               set({ user: cred.user });
@@ -243,8 +257,6 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      // optionally whitelist specific keys:
-      // partialize: (state) => ({ user: state.user, onboarding: state.onboarding, lastStep: state.lastStep })
     },
   ),
 );

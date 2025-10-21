@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "mycyberclinics-app"
-  }
+    "default": "mycyberclinics-app",
+    "staging": "my-cyber-clinics"
+  },
+  "targets": {},
+  "etags": {}
 }

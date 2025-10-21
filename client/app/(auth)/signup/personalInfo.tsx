@@ -26,6 +26,7 @@ import Toast from 'react-native-toast-message';
 const ProfileCompletionSchema = BackendUserSchema.pick({
   role: true,
 }).extend({
+  displayName: z.string(),
   phone: z.string().regex(/^\+?[0-9\s\-()]{8,20}$/, 'Enter a valid phone number'),
   dob: z.date(),
   gender: z.enum(['Male', 'Female', 'Other']),
@@ -94,6 +95,7 @@ export default function PersonalInfoScreen() {
     resolver: zodResolver(ProfileCompletionSchema),
     mode: 'onChange',
     defaultValues: {
+      displayName: '',
       phone: '',
       dob: new Date(),
       gender: 'Male',
@@ -108,6 +110,7 @@ export default function PersonalInfoScreen() {
       console.log('[Personal Info Submitted]', data);
 
       const payload = {
+        displayName: data.displayName,
         phone: data.phone,
         dob: data.dob.toISOString(),
         gender: data.gender,
@@ -169,7 +172,6 @@ export default function PersonalInfoScreen() {
           }}
         >
           <View className="w-full bg-white px-6 dark:bg-[#0B0E11]" style={{ maxWidth: 480 }}>
-
             <Pressable
               onPress={() => {
                 if (router.canGoBack()) {
@@ -178,7 +180,7 @@ export default function PersonalInfoScreen() {
                   router.replace('/(auth)/signup/personalInfo'); //user shouldn't go back after verifying email
                 }
               }}
-              className="dark:bg-misc-circleBtnDark flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder "
+              className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
             >
               <Feather
                 name="arrow-left"
@@ -187,8 +189,7 @@ export default function PersonalInfoScreen() {
               />
             </Pressable>
 
-
-            <View className="mt-4 mb-6">
+            <View className="mb-6 mt-4">
               <Text className="text-[22px] font-[700] text-[#0B1220] dark:text-white">
                 Almost Done 🎉
               </Text>
@@ -197,6 +198,27 @@ export default function PersonalInfoScreen() {
               </Text>
             </View>
 
+            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Name</Text>
+            <Controller
+              control={control}
+              name="displayName"
+              render={({ field: { value, onChange } }) => (
+                <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
+                  <Feather name="user" size={18} color="#9CA3AF" />
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="Name"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="phone-pad"
+                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
+                  />
+                </View>
+              )}
+            />
+            {errors.displayName && (
+              <Text className="mt-1 text-sm text-red-400">{errors.displayName.message}</Text>
+            )}
 
             <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
               Phone number
@@ -221,7 +243,6 @@ export default function PersonalInfoScreen() {
             {errors.phone && (
               <Text className="mt-1 text-sm text-red-400">{errors.phone.message}</Text>
             )}
-
 
             <View className="mt-4">
               <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
@@ -260,7 +281,6 @@ export default function PersonalInfoScreen() {
                 <Text className="mt-1 text-sm text-red-400">{errors.dob.message}</Text>
               )}
             </View>
-
 
             <View className="mt-4">
               <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
@@ -313,7 +333,6 @@ export default function PersonalInfoScreen() {
                 )}
               />
             </View>
-
 
             <View className="mt-4">
               <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
@@ -372,7 +391,6 @@ export default function PersonalInfoScreen() {
               />
             </View>
 
-
             <View className="mt-6">
               <Text className="mb-3 text-[14px] font-[500] text-gray-900 dark:text-white">
                 Account Type
@@ -410,7 +428,7 @@ export default function PersonalInfoScreen() {
               </View>
             </View>
 
-            <View className="items-center mt-10 mb-8">
+            <View className="mb-8 mt-10 items-center">
               <ButtonComponent
                 title="Continue"
                 onPress={handleSubmit(onSubmit)}
