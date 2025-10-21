@@ -60,7 +60,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       profile: null,
       initializing: true,
-      loading: true,
+      loading: false,
       error: null,
       tempEmail: null,
       tempPassword: null,
@@ -123,27 +123,31 @@ export const useAuthStore = create<AuthState>()(
           console.error('[AUTH] signUp error:', err.message);
           set({ error: err.message, loading: false });
           return false;
+        } finally {
+          set({ loading: false });
         }
       },
 
       // signIn
       signIn: async (email, password) => {
+        set({ loading: true, error: null });
         try {
-          set({ loading: true, error: null });
           const auth = getFirebaseAuth();
           const cred = await signInWithEmailAndPassword(auth, email, password);
 
           const token = await cred.user.getIdToken();
           await SecureStore.setItemAsync(TOKEN_KEY, token);
-          console.log('[AUTH] Sign-up successful:', email);
+          console.log('[AUTH] Sign-in successful (Firebase):', email);
 
-          set({ user: cred.user, loading: false });
+          set({ user: cred.user });
           await get().loadProfile();
 
-          console.log('[AUTH] Sign-in successful:', cred.user.uid);
+          console.log('[AUTH] Sign-in complete:', cred.user.uid);
         } catch (err: any) {
           console.error('[AUTH] signIn error:', err.message);
-          set({ error: err.message, loading: false });
+          set({ error: err.message });
+        } finally {
+          set({ loading: false });
         }
       },
 
@@ -205,6 +209,7 @@ export const useAuthStore = create<AuthState>()(
       // rehydrate -> called by MainLayout on mount
       rehydrate: async () => {
         const auth = getFirebaseAuth();
+        set({ loading: false });
         return new Promise<void>((resolve) => {
           onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
@@ -241,7 +246,8 @@ export const useAuthStore = create<AuthState>()(
               console.log('[AUTH] Silent sign-in successful');
             }
 
-            set({ initializing: false });
+            set({ loading: false, initializing: false });
+
             resolve();
           });
 

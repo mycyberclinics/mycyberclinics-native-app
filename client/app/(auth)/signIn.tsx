@@ -32,7 +32,7 @@ export default function SignInScreen() {
     defaultValues: { email: '', password: '' },
   });
 
-  const { signIn, loading } = useAuthStore();
+  const { signIn, loading, setLoading } = useAuthStore();
 
   const [agreed, setAgreed] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
@@ -55,10 +55,13 @@ export default function SignInScreen() {
       await signIn(data.email, data.password);
       const user = useAuthStore.getState().user;
       if (user) {
+        setLoading(true);
         try {
           await fetchProfile();
         } catch (err) {
           console.error('[SignIn] Backend profile fetch failed:', err);
+        } finally {
+          setLoading(false);
         }
         router.replace('/(main)/home');
       }
@@ -108,7 +111,7 @@ export default function SignInScreen() {
                     router.replace('/(onboarding)/onboardingScreen3');
                   }
                 }}
-                className="dark:bg-misc-circleBtnDark flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder "
+                className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
               >
                 <Feather
                   name="arrow-left"
@@ -158,7 +161,7 @@ export default function SignInScreen() {
                     autoCapitalize="none"
                     underlineColorAndroid="transparent"
                     selectionColor="transparent"
-                    style={{ outlineStyle: 'none' }}
+                    style={{ outlineStyle: 'undefined' as any }}
                     className="flex-1 px-2 py-3 border-0 text-misc-placeHolderTextLight dark:text-misc-placeholderTextDark"
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
@@ -197,7 +200,7 @@ export default function SignInScreen() {
                     secureTextEntry={!showPassword}
                     underlineColorAndroid="transparent"
                     selectionColor="transparent"
-                    style={{ outlineStyle: 'none' }}
+                    style={{ outlineStyle: 'undefined' as any }}
                     className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}

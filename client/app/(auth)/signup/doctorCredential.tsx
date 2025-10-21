@@ -89,7 +89,7 @@ export default function DoctorCredentialScreen() {
     console.log('Token:', await auth.currentUser?.getIdToken());
 
     const response = await api.post('/api/profile/upload-doc', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': 'multipart/form-data' }, 
     });
 
     return response.data;
