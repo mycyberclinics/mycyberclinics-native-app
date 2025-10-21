@@ -1,4 +1,3 @@
-// components/ui/ButtonComponent.tsx
 import React from 'react';
 import { Pressable, Text, ActivityIndicator, PressableProps } from 'react-native';
 
