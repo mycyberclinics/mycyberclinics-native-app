@@ -10,12 +10,31 @@ import sessionRoutes from "./routes/session";
 import onboardingRoutes from "./routes/onboarding";
 import preferencesRoutes from "./routes/preferences";
 import { migratePlaintextPasswordsOnStartup } from "./utils/autoMigratePasswords";
+import serve from "koa-static";
+import mount from "koa-mount";
+import path from "path";
+import fs from "fs";
 
 dotenv.config();
 
 const app = new Koa();
 app.use(cors());
 app.use(bodyParser());
+
+// Ensure uploads directory exists for local file storage mode
+const uploadsDir = path.resolve(process.cwd(), "uploads");
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    console.info(`[startup] created uploads directory: ${uploadsDir}`);
+  }
+} catch (err) {
+  console.warn("[startup] could not ensure uploads directory exists:", err);
+}
+
+// Serve uploaded files at /uploads when using local storage mode
+// Use koa-mount to mount the static middleware at the desired path.
+app.use(mount("/uploads", serve(uploadsDir)));
 
 app.use(authRoutes.routes());
 app.use(profileRoutes.routes());
