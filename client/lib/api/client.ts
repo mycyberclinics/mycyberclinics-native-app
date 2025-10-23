@@ -20,7 +20,7 @@ api.interceptors.request.use(async (config) => {
 
     if (user) {
       try {
-        const token = await user.getIdToken(true); // force refresh
+        const token = await user.getIdToken(true); // pass true to force refresh
         config.headers.Authorization = `Bearer ${token}`;
         return config;
       } catch (err: any) {

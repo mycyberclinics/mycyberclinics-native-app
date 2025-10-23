@@ -22,6 +22,8 @@ import { useAuthStore } from '@/store/auth';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import api from '@/lib/api/client';
 import Toast from 'react-native-toast-message';
+import { updateProfile } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/firebase';
 
 const ProfileCompletionSchema = BackendUserSchema.pick({
   role: true,
@@ -46,9 +48,11 @@ export default function PersonalInfoScreen() {
   const [suggestions, setSuggestions] = useState<{ description: string; place_id: string }[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
-  const { syncProfile } = useAuthStore();
+  const { syncProfile, setOnboardingComplete, completeSignUp } = useAuthStore();
 
   const colorScheme = useColorScheme();
+  const auth = getFirebaseAuth();
+  const currentUser = auth.currentUser;
 
   // Google Places autocomplete
   useEffect(() => {
@@ -109,6 +113,15 @@ export default function PersonalInfoScreen() {
       setApiError(null);
       console.log('[Personal Info Submitted]', data);
 
+      if (currentUser && data.displayName) {
+        try {
+          await updateProfile(currentUser, { displayName: data.displayName });
+          console.log('[PersonalInfo] displayName updated in Firebase:', data.displayName);
+        } catch (err) {
+          console.warn('[PersonalInfo] updateProfile failed:', err);
+        }
+      }
+
       const payload = {
         displayName: data.displayName,
         phone: data.phone,
@@ -122,7 +135,9 @@ export default function PersonalInfoScreen() {
       const response = await api.post('/api/profile/complete', payload);
       console.log('[Profile Complete Response]', response.data);
 
+      setOnboardingComplete();
       await syncProfile({ ...data, role: data.role });
+      completeSignUp();
 
       Toast.show({
         type: 'success',
@@ -134,13 +149,17 @@ export default function PersonalInfoScreen() {
         visibilityTime: 2500,
       });
 
-      setTimeout(() => {
-        if (data.role === 'doctor') {
-          router.push('/(auth)/signup/doctorCredential');
-        } else {
-          router.replace('/(main)/home');
-        }
-      }, 2200);
+      const normalizedRole = data.role === 'doctor' ? 'physician' : data.role;
+
+      if (normalizedRole === 'physician') {
+        router.push('/(auth)/signup/doctorCredential');
+      } else {
+        await api.post('/profile', data);
+        useAuthStore.setState({ onboarding: false });
+        console.log('[PersonalInfo] ✅ Onboarding complete, redirecting to home');
+
+        router.replace('/(main)/home');
+      }
     } catch (error: any) {
       console.error('[Personal Info] Error syncing:', error?.response?.data || error);
       const message =
@@ -210,7 +229,7 @@ export default function PersonalInfoScreen() {
                     onChangeText={onChange}
                     placeholder="Name"
                     placeholderTextColor="#9CA3AF"
-                    keyboardType="phone-pad"
+                    keyboardType="default"
                     className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
                   />
                 </View>

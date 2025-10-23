@@ -19,7 +19,7 @@ type UploadedFile = {
 
 export default function DoctorCredentialScreen() {
   const router = useRouter();
-  const { completeSignUp } = useAuthStore();
+  const { completeSignUp, syncProfile, setOnboardingComplete } = useAuthStore();
 
   const colorScheme = useColorScheme();
 
@@ -28,7 +28,6 @@ export default function DoctorCredentialScreen() {
   const [additionalFile, setAdditionalFile] = useState<UploadedFile | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-
 
   const pickFile = async (setFile: (f: UploadedFile | null) => void) => {
     try {
@@ -57,7 +56,6 @@ export default function DoctorCredentialScreen() {
     }
   };
 
-
   const uploadDocs = async () => {
     const formData = new FormData();
 
@@ -80,21 +78,20 @@ export default function DoctorCredentialScreen() {
     const auth = getFirebaseAuth();
     const token = await auth.currentUser?.getIdToken();
 
-    console.log('currentUser after rehydrate:', auth.currentUser?.email);
-    console.log('token:', await auth.currentUser?.getIdToken());
+    if (!token) throw new Error('No auth token found — user not logged in.');
 
-    console.log('[DEBUG] currentUser:', auth.currentUser?.email);
-    console.log('[DEBUG] token:', token?.slice(0, 30) + '...');
-    console.log('User:', auth.currentUser?.email);
-    console.log('Token:', await auth.currentUser?.getIdToken());
+    console.log('[DoctorCredential] Uploading docs with token...');
 
     const response = await api.post('/api/profile/upload-doc', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}`,
+      },
     });
-
+    console.log('[Doctor Credential Check: ', response.data);
+    console.log('[DoctorCredential] Upload success:', response.status);
     return response.data;
   };
-
 
   const handleContinue = async () => {
     try {
@@ -102,12 +99,20 @@ export default function DoctorCredentialScreen() {
       await uploadDocs();
 
       setSuccess(true);
+
+      // mark onboarding complete (sets onboarding=false, etc.)
+      setOnboardingComplete();
+
+      // optional: ensure profile sync after docs uploaded
+      await syncProfile({ bio });
+
+      // mark app state clean
       completeSignUp();
 
       setTimeout(() => {
         router.replace('/(main)/home');
-      }, 1800);
-    } catch (err) {
+      }, 1200);
+    } catch (err: any) {
       console.error('[DoctorCredential] Submit error:', err);
     } finally {
       setLoading(false);
@@ -131,7 +136,7 @@ export default function DoctorCredentialScreen() {
                   router.replace('/(auth)/signup/personalInfo');
                 }
               }}
-              className="dark:bg-misc-circleBtnDark flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder "
+              className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
             >
               <Feather
                 name="arrow-left"

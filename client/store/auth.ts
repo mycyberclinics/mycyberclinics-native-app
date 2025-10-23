@@ -8,7 +8,6 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged,
   onIdTokenChanged,
-  // sendEmailVerification,
 } from 'firebase/auth';
 import api from '@/lib/api/client';
 import { BackendUserSchema, BackendUser } from '@/lib/schemas/user';
@@ -27,6 +26,9 @@ type AuthState = {
   tempPassword: string | null;
   onboarding: boolean;
   lastStep: string | null;
+  emailVerified: boolean;
+  profileCompleted: boolean;
+  // hasSeenIntro: boolean; // ✅ NEW FLAG
 
   // setters
   setUser: (user: AppUser | null) => void;
@@ -40,6 +42,7 @@ type AuthState = {
   setLastStep: (step: string | null) => void;
   reset: () => void;
   setOnboardingComplete: () => void;
+  // setHasSeenIntro: (value: boolean) => void; // ✅ NEW SETTER
 
   // actions
   signIn: (email: string, password: string) => Promise<void>;
@@ -66,6 +69,9 @@ export const useAuthStore = create<AuthState>()(
       tempPassword: null,
       onboarding: false,
       lastStep: null,
+      emailVerified: false,
+      profileCompleted: false,
+      // hasSeenIntro: false, // ✅ added
 
       // setters
       setUser: (user) => set({ user }),
@@ -77,8 +83,11 @@ export const useAuthStore = create<AuthState>()(
       setTempPassword: (password) => set({ tempPassword: password }),
       setOnboarding: (value) => set({ onboarding: value }),
       setLastStep: (step) => set({ lastStep: step }),
+      // setHasSeenIntro: (value) => set({ hasSeenIntro: value }), // ✅ added
+
       reset: () => set({ user: null, lastStep: null, onboarding: true }),
-      setOnboardingComplete: () => set({ onboarding: false }),
+      setOnboardingComplete: () =>
+        set({ onboarding: false, emailVerified: true, profileCompleted: true }),
 
       // signUp
       signUp: async (email, password) => {
@@ -92,15 +101,6 @@ export const useAuthStore = create<AuthState>()(
           await SecureStore.setItemAsync(TOKEN_KEY, token);
           console.log('[AUTH] Sign-up successful:', uid);
 
-          // send verification email immediately
-          // try {
-          //   await sendEmailVerification(cred.user);
-          //   console.log('[AUTH] verification email sent');
-          // } catch (sendErr) {
-          //   console.warn('[AUTH] sendEmailVerification failed', sendErr);
-          // }
-
-          // sync with backend
           try {
             await api.post('/api/signup', { email: em, firebaseUid: uid });
             console.log('[AUTH] User synced with backend');
@@ -126,34 +126,157 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // signIn
       signIn: async (email, password) => {
         try {
           set({ loading: true, error: null });
           const auth = getFirebaseAuth();
           const cred = await signInWithEmailAndPassword(auth, email, password);
-
           const token = await cred.user.getIdToken();
           await SecureStore.setItemAsync(TOKEN_KEY, token);
-          console.log('[AUTH] Sign-up successful:', email);
+          console.log('[AUTH] Sign-in successful:', email);
 
           set({ user: cred.user, loading: false });
           await get().loadProfile();
 
-          console.log('[AUTH] Sign-in successful:', cred.user.uid);
+          const profile = get().profile;
+
+          // Only require onboarding if key fields are missing
+          const onboardingNeeded = !profile || !profile.displayName || !profile.role;
+
+          // ✅ Only set lastStep if null
+          set({
+            onboarding: onboardingNeeded,
+            lastStep: get().lastStep ?? '/(auth)/signup/emailPassword',
+          });
+
+          console.log(
+            '[AUTH Sign-in resolved. onboardingNeeded:',
+            onboardingNeeded,
+            'lastStep:',
+            get().lastStep,
+          );
         } catch (err: any) {
           console.error('[AUTH] signIn error:', err.message);
           set({ error: err.message, loading: false });
         }
       },
 
+      // signIn
+      // signIn: async (email, password) => {
+      //   try {
+      //     set({ loading: true, error: null });
+      //     const auth = getFirebaseAuth();
+      //     const cred = await signInWithEmailAndPassword(auth, email, password);
+      //     const token = await cred.user.getIdToken();
+      //     await SecureStore.setItemAsync(TOKEN_KEY, token);
+      //     console.log('[AUTH] Sign-in successful:', email);
+
+      //     set({ user: cred.user, loading: false });
+      //     await get().loadProfile();
+
+      //     const profile = get().profile;
+      //     const onboardingNeeded =
+      //       !profile || !profile.displayName || !profile.role || !profile.age;
+
+      //     if (cred.user.emailVerified) {
+      //       console.log('[AUTH] User verified → onboarding cleared + lastStep reset');
+      //       set({
+      //         onboarding: false,
+      //         lastStep: null,
+      //       });
+      //     } else if (onboardingNeeded) {
+      //       // keep onboarding active and lastStep if not verified
+      //       const { lastStep } = get();
+      //       set({
+      //         onboarding: true,
+      //         lastStep: lastStep || '/signup/verifyEmail',
+      //       });
+      //     }
+
+      //     console.log(
+      //       '[AUTH Sign-in resolved. onboardingNeeded:',
+      //       onboardingNeeded,
+      //       'lastStep:',
+      //       get().lastStep,
+      //     );
+
+      //     const { lastStep } = get();
+
+      //     set({
+      //       onboarding: onboardingNeeded,
+      //       lastStep: lastStep || '/(auth)/signup/emailPassword',
+      //     });
+      //     console.log(
+      //       '[AUTH Sign-in resolved. onboardingNeeded:',
+      //       onboardingNeeded,
+      //       'lastStep:',
+      //       get().lastStep,
+      //     );
+      //   } catch (err: any) {
+      //     console.error('[AUTH] signIn error:', err.message);
+      //     set({ error: err.message, loading: false });
+      //   }
+      // },
+
       // loadProfile
+      // loadProfile: async () => {
+      //   try {
+      //     const token = await get().user?.getIdToken?.();
+      //     const response = await api.get('/api/profile', {
+      //       headers: { Authorization: `Bearer ${token}` },
+      //     });
+
+      //     const validated = BackendUserSchema.parse(response.data);
+      //     const normalizedRole = validated.role === 'physician' ? 'doctor' : validated.role;
+
+      //     // ✅ If profile loads successfully, onboarding is done
+      //     set({
+      //       profile: { ...validated, role: normalizedRole },
+      //       onboarding: false,
+      //     });
+
+      //     console.log('[AUTH] Profile loaded:', validated);
+      //   } catch (err: any) {
+      //     console.error('[AUTH] loadProfile error:', err.message);
+
+      //     // optional: if 404, stay in onboarding flow
+      //     if (err.response?.status === 404) {
+      //       console.log('[AUTH] No profile found — onboarding continues');
+      //       set({ onboarding: true });
+      //     }
+      //   }
+      // },
+
+      // ✅ Final loadProfile
       loadProfile: async () => {
         try {
-          const response = await api.get('/api/profile');
+          const user = get().user;
+          if (!user) throw new Error('No authenticated user found');
+
+          const token = await user.getIdToken();
+          const response = await api.get('api/profile', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
           const validated = BackendUserSchema.parse(response.data);
-          set({ profile: validated });
+          const normalizedRole = validated.role === 'physician' ? 'doctor' : validated.role;
+
+          set({
+            profile: { ...validated, role: normalizedRole },
+          });
+
           console.log('[AUTH] Profile loaded:', validated);
+
+          // ✅ If verified + profile exists, disable onboarding
+          if (user.emailVerified && validated.email) {
+            set({
+              onboarding: false,
+              lastStep: null, // ✅ clear stale step
+            });
+            console.log(
+              '[AUTH] User verified + profile exists → onboarding cleared + lastStep reset',
+            );
+          }
         } catch (err: any) {
           console.error('[AUTH] loadProfile error:', err.message);
         }
@@ -162,10 +285,26 @@ export const useAuthStore = create<AuthState>()(
       // syncProfile
       syncProfile: async (updates) => {
         try {
-          const response = await api.put('/api/profile', updates);
+          const auth = getFirebaseAuth();
+          const token = await auth.currentUser?.getIdToken();
+          // Normalize frontend role → backend naming
+          const normalizedUpdates = {
+            ...updates,
+            role: updates.role === 'doctor' ? 'physician' : updates.role,
+          };
+
+          const response = await api.put('/api/profile', normalizedUpdates, {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : undefined,
+            },
+          });
           const validated = BackendUserSchema.parse(response.data);
-          set({ profile: validated });
-          console.log('[AUTH] Profile updated:', validated);
+
+          // Normalize backend role again for store consistency
+          const normalizedRole = validated.role === 'physician' ? 'doctor' : validated.role;
+
+          set({ profile: { ...validated, role: normalizedRole } });
+          console.log('[AUTH] Profile updated:', { ...validated, role: normalizedRole });
         } catch (err: any) {
           console.error('[AUTH] syncProfile error:', err.message);
         }
@@ -202,7 +341,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // rehydrate -> called by MainLayout on mount
+      // rehydrate
       rehydrate: async () => {
         const auth = getFirebaseAuth();
         return new Promise<void>((resolve) => {
@@ -211,20 +350,14 @@ export const useAuthStore = create<AuthState>()(
               console.log('[AUTH] Firebase user detected during rehydrate:', firebaseUser.email);
               set({ user: firebaseUser });
 
-              // load remote profile to decide onboarding state
               await get().loadProfile();
               const profile = get().profile;
 
-              const onboardingNeeded =
-                !profile || !profile.displayName || !profile.role || !profile.age;
+              const onboardingNeeded = !profile || !profile.displayName || !profile.role;
 
               const { lastStep } = get();
-              set({
-                onboarding: onboardingNeeded,
-                lastStep: lastStep || '/(auth)/signup/emailPassword',
-              });
 
-              console.log('[AUTH] Rehydrated state', {
+              set({
                 onboarding: onboardingNeeded,
                 lastStep: lastStep || '/(auth)/signup/emailPassword',
               });
@@ -234,8 +367,8 @@ export const useAuthStore = create<AuthState>()(
               const auth = getFirebaseAuth();
               const cred = await signInWithEmailAndPassword(
                 auth,
-                get().tempEmail as string, // remember this could be null
-                get().tempPassword as string, // remember this coulc be null
+                get().tempEmail as string,
+                get().tempPassword as string,
               );
               set({ user: cred.user });
               console.log('[AUTH] Silent sign-in successful');
@@ -245,10 +378,15 @@ export const useAuthStore = create<AuthState>()(
             resolve();
           });
 
+          // sanity check after rehydration
+          if (get().user?.emailVerified && get().onboarding) {
+            set({ onboarding: false, lastStep: null });
+          }
+
           onIdTokenChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
               const token = await firebaseUser.getIdToken();
-              await SecureStore.setItemAsync('mc_firebase_id_token', token);
+              await SecureStore.setItemAsync(TOKEN_KEY, token);
             }
           });
         });

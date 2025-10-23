@@ -172,6 +172,11 @@ export default function ConfirmEmailScreen() {
       return;
     }
 
+    // When verification confirmed:
+    const auth = getFirebaseAuth();
+    await auth.currentUser?.getIdToken(true); // ✅ Force refresh token
+    console.log('[ConfirmEmail] Token refreshed after verification');
+
     try {
       console.log('[ConfirmEmail] continuing to personal info screen');
       router.replace('/(auth)/signup/personalInfo');
@@ -182,8 +187,8 @@ export default function ConfirmEmailScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-      <View className="justify-between flex-1 px-6 bg-card-cardBGLight dark:bg-bodyBG">
-        <View className="flex flex-col items-start justify-center gap-4 mt-10">
+      <View className="flex-1 justify-between bg-card-cardBGLight px-6 dark:bg-bodyBG">
+        <View className="mt-10 flex flex-col items-start justify-center gap-4">
           <View className="mt-8">
             <Pressable
               onPress={() => {
@@ -193,7 +198,7 @@ export default function ConfirmEmailScreen() {
                   router.replace('/(auth)/signup/confirmPassword');
                 }
               }}
-              className="dark:bg-misc-circleBtnDark flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder "
+              className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
             >
               <Feather
                 name="arrow-left"
@@ -203,12 +208,12 @@ export default function ConfirmEmailScreen() {
             </Pressable>
           </View>
 
-          <View className="flex flex-col items-center justify-center w-full gap-4">
+          <View className="flex w-full flex-col items-center justify-center gap-4">
             <View className="h-[120px] w-[120px]">
-              <Image source={require('@/assets/images/letter.png')} className="w-full h-full" />
+              <Image source={require('@/assets/images/letter.png')} className="h-full w-full" />
             </View>
 
-            <View className="flex flex-col items-center w-full gap-1 px-4 mx-auto">
+            <View className="mx-auto flex w-full flex-col items-center gap-1 px-4">
               <Text className="text-[20px] font-[700] text-[#111827] dark:text-white">
                 Almost there!
               </Text>
@@ -222,19 +227,17 @@ export default function ConfirmEmailScreen() {
               </Text>
 
               {linkDetectedMessage && (
-                <Text className="mt-2 text-xl text-center text-white">
-                  {linkDetectedMessage}
-                </Text>
+                <Text className="mt-2 text-center text-xl text-white">{linkDetectedMessage}</Text>
               )}
 
               {verified && (
-                <Text className="mt-2 text-4xl text-center text-green-600">
+                <Text className="mt-2 text-center text-4xl text-green-600">
                   You may continue now.
                 </Text>
               )}
             </View>
 
-            <View className="flex-row items-center justify-center mt-4">
+            <View className="mt-4 flex-row items-center justify-center">
               <Text className="text-[14px] font-[500] text-text-primaryLight dark:text-text-primaryDark">
                 {"Didn't receive the link?"}
               </Text>
@@ -260,7 +263,7 @@ export default function ConfirmEmailScreen() {
           </View>
         </View>
 
-        <View className="items-center justify-center gap-6 mb-10">
+        <View className="mb-10 items-center justify-center gap-6">
           <Animated.View style={pulseStyle}>
             <ButtonComponent
               title="Continue"

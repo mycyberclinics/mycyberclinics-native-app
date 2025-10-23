@@ -19,6 +19,12 @@ const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
   iOS: { bundleId: 'com.mycyberclinics.app' },
   android: { packageName: 'com.mycyberclinics.app', installApp: true },
 };
+// const actionCodeSettings: ActionCodeSettings = {
+//   url: 'https://mycyberclinics.page.link/verifyEmail', // Must match your Firebase Console config
+//   handleCodeInApp: true,
+//   iOS: { bundleId: 'com.mycyberclinics.app' },
+//   android: { packageName: 'com.mycyberclinics.app', installApp: true },
+// };
 
 const Step3Schema = SignupFormSchema.extend({
   confirmPassword: z.string().min(1, 'Please confirm your password'),
@@ -81,7 +87,7 @@ export default function ConfirmPasswordScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-      <View className="justify-between flex-1 px-6 bg-card-cardBGLight dark:bg-bodyBG">
+      <View className="flex-1 justify-between bg-card-cardBGLight px-6 dark:bg-bodyBG">
         <View>
           <View className="mt-8">
             <Pressable
@@ -92,7 +98,7 @@ export default function ConfirmPasswordScreen() {
                   router.replace('/(auth)/signup/verifyPassword');
                 }
               }}
-              className="dark:bg-misc-circleBtnDark flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder "
+              className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
             >
               <Feather
                 name="arrow-left"
@@ -102,7 +108,7 @@ export default function ConfirmPasswordScreen() {
             </Pressable>
           </View>
 
-          <View className="mt-4 mb-6">
+          <View className="mb-6 mt-4">
             <Text className="text-[14px] font-medium text-gray-700 dark:text-gray-300">
               Step 3 of 7
             </Text>
@@ -111,7 +117,7 @@ export default function ConfirmPasswordScreen() {
             </View>
           </View>
 
-          <View className="flex flex-col gap-4 mb-4">
+          <View className="mb-4 flex flex-col gap-4">
             <Text className="text-[24px] font-[700] text-text-primaryLight dark:text-text-primaryDark">
               Welcome To Cyberclinics
             </Text>
@@ -212,7 +218,7 @@ export default function ConfirmPasswordScreen() {
             )}
           </View>
         </View>
-        <View className="items-center justify-center gap-6 mb-10">
+        <View className="mb-10 items-center justify-center gap-6">
           <ButtonComponent
             title="Continue"
             onPress={handleSubmit(onSubmit)}
@@ -221,7 +227,7 @@ export default function ConfirmPasswordScreen() {
             style={{ width: 328 }}
           />
 
-          <View className="flex-row justify-center mx-auto">
+          <View className="mx-auto flex-row justify-center">
             <Text className="text-[14px] font-[500] text-text-primaryLight dark:text-text-primaryDark">
               Already have an account?
             </Text>

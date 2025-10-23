@@ -1,117 +1,86 @@
 import React, { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
-import { getFirebaseAuth, forceRefreshIdToken } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { View, ActivityIndicator, Text } from 'react-native';
+import { Slot, useRouter } from 'expo-router';
+import { onAuthStateChanged, getAuth } from 'firebase/auth';
+import { Toast } from 'react-native-toast-message/lib/src/Toast';
 import { useAuthStore } from '@/store/auth';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import Toast from 'react-native-toast-message';
 
 export default function MainLayout() {
   const router = useRouter();
-  const segments = useSegments() as unknown as string[];
-  const pathname = usePathname();
+  const { user, onboarding, lastStep, setUser, initializing, rehydrate } = useAuthStore();
+  const [rehydrated, setRehydrated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  const { user, setUser, initializing, setInitializing, onboarding, lastStep, rehydrate } =
-    useAuthStore();
-
-  const [firebaseReady, setFirebaseReady] = useState(false);
-
+  // ✅ Rehydrate Zustand store once on app load
   useEffect(() => {
     (async () => {
       try {
-        await forceRefreshIdToken();
-      } catch (e) {
-        console.warn('[MainLayout] forceRefreshIdToken failed', e);
+        await rehydrate();
+        setRehydrated(true);
+      } catch (err) {
+        console.error('[MainLayout] Rehydrate error:', err);
+        setRehydrated(true);
       }
     })();
-  }, []);
-
-  // Rehydrate Zustand state
-  useEffect(() => {
-    console.log('[MainLayout] Rehydrating persisted auth state...');
-    rehydrate();
   }, [rehydrate]);
 
-  // Firebase auth listener
+  // ✅ Firebase Auth state listener
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    console.log('[MainLayout] Subscribing to Firebase auth state...');
-
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        const { uid, email } = fbUser;
-        console.log('[MainLayout] Firebase user detected:', email);
-        setUser({ id: uid, email: email || '' });
-
-        try {
-          const token = await fbUser.getIdToken();
-          const { default: SecureStore } = await import('expo-secure-store');
-          await SecureStore.setItemAsync('mc_firebase_id_token', token);
-        } catch (err) {
-          console.warn('[MainLayout] Failed to cache token:', err);
-        }
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
       } else {
-        console.log('[MainLayout] No Firebase user.');
         setUser(null);
       }
-
-      setFirebaseReady(true);
-      setInitializing(false);
+      setCheckingAuth(false);
     });
-
     return () => unsubscribe();
-  }, [setUser, setInitializing]);
+  }, [setUser]);
 
-  // Navigation control
+  // ✅ Routing logic based on user, onboarding, and lastStep
   useEffect(() => {
-    if (initializing || !firebaseReady) return;
+    if (initializing || !rehydrated || checkingAuth) return;
 
-    const inAuthFlow = segments[0] === '(auth)';
-    const inMainFlow = segments[0] === '(main)';
-    const inSignupFlow = inAuthFlow && segments.includes('signup');
-
-    console.log('[MainLayout] Route:', segments.join('/'));
-    console.log('[MainLayout] Auth state:', {
-      user,
-      onboarding,
-      lastStep,
-      inAuthFlow,
-      inSignupFlow,
-      inMainFlow,
+    console.log('[MainLayout] Deciding navigation...', {
+      user: user?.email,
+      onboarding: false,
+      lastStep: null,
     });
 
-    // No user → start signup flow
-    if (!user && !inAuthFlow) {
-      console.log('[MainLayout] Redirect → /(auth)/signup/emailPassword (no user)');
-      router.replace('/(auth)/signup/emailPassword');
-      return;
-    }
-
-    // Onboarding in progress → resume last step
-    if (user && onboarding) {
-      if (!inSignupFlow || (lastStep && pathname !== lastStep)) {
-        console.log('[MainLayout] Resuming onboarding →', lastStep);
+    try {
+      if (!user) {
+        router.replace('/(auth)/signIn');
+      } else if (onboarding && lastStep) {
+        // Resume from the last onboarding step
+        router.replace(lastStep as any);
+      } else if (onboarding && !lastStep) {
+        // Start onboarding at first step if no lastStep
         router.replace('/(auth)/signup/emailPassword');
+      } else if (!onboarding) {
+        // Fully onboarded → go home
+        router.replace('/(main)/home');
       }
-      return;
+    } catch (err) {
+      console.error('[MainLayout] Routing error:', err);
     }
+  }, [user, onboarding, lastStep, initializing, rehydrated, checkingAuth, router]);
 
-    // Fully onboarded → home
-    if (user && !onboarding && !inMainFlow) {
-      console.log('[MainLayout] Redirect → /(main)/home');
-      router.replace('/(main)/home');
-      return;
-    }
-  }, [initializing, firebaseReady, user, onboarding, lastStep, segments, router, pathname]);
-
-  if (initializing || !firebaseReady) {
+  // ✅ Loader while checking auth or rehydrating
+  if (checkingAuth || initializing || !rehydrated) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" />
+      <View className="flex-1 items-center justify-center bg-white dark:bg-black">
+        <ActivityIndicator size="large" color="#1ED28A" />
+        <Text className="mt-3 text-gray-500 dark:text-gray-300">Preparing app...</Text>
       </View>
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  // ✅ Default render: slot for children
+  return (
+    <View className="flex-1">
+      <Slot />
+      <Toast position="bottom" />
+    </View>
+  );
 }

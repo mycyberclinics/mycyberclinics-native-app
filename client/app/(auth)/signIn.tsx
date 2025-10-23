@@ -39,8 +39,9 @@ export default function SignInScreen() {
   const [focusedField, setFocusedField] = React.useState<string | null>(null);
 
   const user = useAuthStore((state) => state.user);
+  const profile = useAuthStore((state) => state.profile);
   const displayName =
-    user && 'email' in user && user.email ? user.email.split('@')[0] : user?.email || 'User';
+    profile?.displayName || (user && 'email' in user ? user.email.split('@')[0] : 'User');
 
   const isTablet = width >= 768 && width < 1024;
   const isDesktop = width >= 1024;
@@ -108,7 +109,7 @@ export default function SignInScreen() {
                     router.replace('/(onboarding)/onboardingScreen3');
                   }
                 }}
-                className="dark:bg-misc-circleBtnDark flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder "
+                className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
               >
                 <Feather
                   name="arrow-left"

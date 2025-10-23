@@ -7,7 +7,7 @@ export const BackendUserSchema = z.object({
   bio: z.string().max(500).optional(),
   role: z.enum(['doctor', 'physician', 'patient']).default('patient'),
   age: z.number().int().optional(),
-  displayName: z.string().optional(),
+  displayName: z.string().nullable().optional(),
   files: z
     .array(
       z.object({
