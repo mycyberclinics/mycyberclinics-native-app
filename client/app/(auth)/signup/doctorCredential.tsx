@@ -146,7 +146,7 @@ export default function DoctorCredentialScreen() {
             </Pressable>
           </View>
 
-          <View className="mt-6 mb-4">
+          <View className="mb-4 mt-6">
             <Text className="text-[18px] font-[700] text-[#0B1220] dark:text-white">
               Hi Doctor, Verify Your Medical Credentials
             </Text>
@@ -240,7 +240,7 @@ export default function DoctorCredentialScreen() {
             )}
           </View>
 
-          <View className="items-center mt-10 mb-6">
+          <View className="mb-6 mt-10 items-center">
             <ButtonComponent
               title="Continue"
               onPress={handleContinue}
