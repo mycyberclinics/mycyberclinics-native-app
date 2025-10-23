@@ -2,10 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   Pressable,
   ScrollView,
-  ActivityIndicator,
   useColorScheme,
   Image,
   Alert,
@@ -27,6 +25,7 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
+import ButtonComponent from '@/components/ButtonComponent';
 
 const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
   url: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN_DYNAMIC_LINK as string,
@@ -37,15 +36,10 @@ const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
 
 export default function ConfirmEmailScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   useTrackOnboardingStep();
 
   const auth = getFirebaseAuth();
-
-
-  const { user, loading, setLoading, completeSignUp } = useAuthStore();
-
+  const { user, loading, setLoading } = useAuthStore();
 
   const [resending, setResending] = useState(false);
   const [resendCooldownSec, setResendCooldownSec] = useState(0);
@@ -53,12 +47,10 @@ export default function ConfirmEmailScreen() {
   const [verified, setVerified] = useState<boolean>(!!user?.emailVerified);
   const [linkDetectedMessage, setLinkDetectedMessage] = useState<string | null>(null);
 
-  // button pulse animation while waiting
-  const pulse = useSharedValue(1);
+  const colorScheme = useColorScheme();
 
-  // pulse start/stop depending on verified
-  // this should help us know when a user has clicked the verification link
-  // the pulse should stop when the user hits the link sent to their email
+  // Button pulse animation
+  const pulse = useSharedValue(1);
   useEffect(() => {
     if (!verified) {
       pulse.value = withRepeat(
@@ -78,7 +70,7 @@ export default function ConfirmEmailScreen() {
     transform: [{ scale: pulse.value }],
   }));
 
-  // reload firebase user and update verified state
+  // reload firebase user and check verification
   const reloadAndCheck = useCallback(async () => {
     try {
       setCheckingVerification(true);
@@ -100,29 +92,19 @@ export default function ConfirmEmailScreen() {
 
   // send initial verification on mount
   useEffect(() => {
-    let mounted = true;
-    const sendIfNeeded = async () => {
-      try {
-        const current = auth.currentUser;
-        if (current && !current.emailVerified) {
-          await sendEmailVerification(current, actionCodeSettings);
-          console.log('[ConfirmEmail] sent initial verification email to', current.email);
-        }
-      } catch (err: any) {
+    const current = auth.currentUser;
+    if (current && !current.emailVerified) {
+      sendEmailVerification(current, actionCodeSettings).catch((err: any) => {
         if (err?.code === 'auth/too-many-requests') {
           console.warn('[ConfirmEmail] skipped initial send: too many requests');
         } else {
           console.error('[ConfirmEmail] initial sendEmailVerification', err);
         }
-      }
-    };
-    if (mounted) sendIfNeeded();
-    return () => {
-      mounted = false;
-    };
+      });
+    }
   }, []);
 
-  // this resends handler with small cooldown
+  // resend handler with cooldown
   const handleResend = async () => {
     const current = auth.currentUser;
     if (!current) {
@@ -143,7 +125,7 @@ export default function ConfirmEmailScreen() {
     }
   };
 
-  // countdown effect for cooldown
+  // cooldown countdown
   useEffect(() => {
     if (resendCooldownSec <= 0) return;
     const t = setInterval(() => {
@@ -158,7 +140,7 @@ export default function ConfirmEmailScreen() {
     return () => clearInterval(t);
   }, [resendCooldownSec]);
 
-  // handle deep-link URL events: when a user taps email link and returns to app
+  // handle deep links and app resume
   useEffect(() => {
     const urlListener = ({ url }: { url: string }) => {
       console.log('[ConfirmEmail] Linking url received:', url);
@@ -170,15 +152,9 @@ export default function ConfirmEmailScreen() {
       ? Linking.addEventListener('url', urlListener)
       : Linking.addEventListener('url', urlListener);
 
-    // also check when the app becomes active 
-    const subscription = AppState.addEventListener
-      ? AppState.addEventListener('change', (state: AppStateStatus) => {
-          if (state === 'active') {
-            // when the app resumes, re-check user again 
-            reloadAndCheck();
-          }
-        })
-      : undefined;
+    const subscription = AppState.addEventListener?.('change', (state: AppStateStatus) => {
+      if (state === 'active') reloadAndCheck();
+    });
 
     return () => {
       try {
@@ -190,18 +166,19 @@ export default function ConfirmEmailScreen() {
     };
   }, [reloadAndCheck]);
 
-  //  only allow to continue if verified
   const handleContinue = async () => {
     if (!verified) {
       Alert.alert('Not verified!', 'Please click the verification link in your email first. 🚫');
       return;
     }
 
-    // call store action to clear onboarding and move to next screen
-    // could be changed if it doesn't meet project edpecations 
+    // When verification confirmed:
+    const auth = getFirebaseAuth();
+    await auth.currentUser?.getIdToken(true); // ✅ Force refresh token
+    console.log('[ConfirmEmail] Token refreshed after verification');
+
     try {
-      // called completeSignUp here from the store to clear onboarding flag
-      completeSignUp();
+      console.log('[ConfirmEmail] continuing to personal info screen');
       router.replace('/(auth)/signup/personalInfo');
     } catch (err) {
       console.error('[ConfirmEmail] continue error', err);
@@ -210,72 +187,70 @@ export default function ConfirmEmailScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-      <View
-        className={`flex-1 justify-between px-6 ${isDark ? 'bg-bodyBG' : 'bg-card-cardBGLight'}`}
-      >
-        <View className="flex flex-col items-start justify-center gap-4 mt-10 border-2 border-white">
+      <View className="flex-1 justify-between bg-card-cardBGLight px-6 dark:bg-bodyBG">
+        <View className="mt-10 flex flex-col items-start justify-center gap-4">
           <View className="mt-8">
             <Pressable
               onPress={() => {
-                if (router.canGoBack()) router.back();
-                else router.replace('/(auth)/signup/verifyPassword');
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(auth)/signup/confirmPassword');
+                }
               }}
-              className={`flex h-[40px] w-[40px] items-center justify-center rounded-full ${isDark ? 'border border-[#2F343A] bg-[#15191E]' : 'bg-[#F3F4F6]'}`}
+              className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
             >
-              <Feather name="arrow-left" size={22} color={isDark ? '#fff' : '#111827'} />
+              <Feather
+                name="arrow-left"
+                size={22}
+                color={colorScheme === 'dark' ? '#F5F5F5' : '#111827'}
+              />
             </Pressable>
           </View>
-          <View className="flex flex-col items-center justify-center w-full gap-4 ">
+
+          <View className="flex w-full flex-col items-center justify-center gap-4">
             <View className="h-[120px] w-[120px]">
-              <Image source={require('@/assets/images/letter.png')} className="w-full h-full" />
+              <Image source={require('@/assets/images/letter.png')} className="h-full w-full" />
             </View>
 
-            <View className="flex flex-col items-center w-full h-auto gap-1 px-4 mx-auto ">
-              <Text
-                className={`text-[20px] font-[700] ${isDark ? 'text-white' : 'text-[#111827]'}`}
-              >
+            <View className="mx-auto flex w-full flex-col items-center gap-1 px-4">
+              <Text className="text-[20px] font-[700] text-[#111827] dark:text-white">
                 Almost there!
               </Text>
 
-              <Text
-                className={`mt-2 h-auto w-[281px] text-center text-[14px] leading-6 ${isDark ? 'text-[#D1D5DB]' : 'text-[#4B5563]'}`}
-              >
+              <Text className="mt-2 w-[281px] text-center text-[14px] leading-6 text-[#4B5563] dark:text-[#D1D5DB]">
                 Click on the link sent to the email (
-                <Text
-                  className={`font-[600] ${isDark ? 'text-text-accentDark' : 'text-text-accentLight'}`}
-                >
+                <Text className="font-[600] text-text-accentLight dark:text-text-accentDark">
                   {user?.email ?? '(your email)'}
                 </Text>
                 ) you provided.
               </Text>
 
               {linkDetectedMessage && (
-                <Text className="mt-2 text-xl text-center text-emerald-500">
-                  {linkDetectedMessage}
-                </Text>
+                <Text className="mt-2 text-center text-xl text-white">{linkDetectedMessage}</Text>
               )}
 
               {verified && (
-                <Text className="mt-2 text-2xl text-center text-green-600">
-                  Email confirmed — you may continue.
+                <Text className="mt-2 text-center text-4xl text-green-600">
+                  You may continue now.
                 </Text>
               )}
             </View>
 
-            <View className="flex-row items-center justify-center mt-4">
-              <Text
-                className={`text-[14px] font-[500] ${isDark ? 'text-text-primaryDark' : 'text-text-primaryLight'}`}
-              >
+            <View className="mt-4 flex-row items-center justify-center">
+              <Text className="text-[14px] font-[500] text-text-primaryLight dark:text-text-primaryDark">
                 {"Didn't receive the link?"}
               </Text>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={handleResend}
                 disabled={resending || resendCooldownSec > 0}
                 className="ml-2"
               >
                 <Text
-                  className={`text-[14px] font-[600] ${resending || resendCooldownSec > 0 ? 'text-gray-400' : 'text-emerald-500'}`}
+                  className={`text-[14px] font-[600] ${
+                    resending || resendCooldownSec > 0 ? 'text-gray-400' : 'text-emerald-500'
+                  }`}
                 >
                   {resending
                     ? 'Sending...'
@@ -283,24 +258,20 @@ export default function ConfirmEmailScreen() {
                       ? `Retry in ${resendCooldownSec}s`
                       : 'Re-send'}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>
 
-        <View className="items-center justify-center gap-6 mb-10">
+        <View className="mb-10 items-center justify-center gap-6">
           <Animated.View style={pulseStyle}>
-            <TouchableOpacity
-              disabled={!verified || checkingVerification || loading}
+            <ButtonComponent
+              title="Continue"
               onPress={handleContinue}
-              className={`flex h-[48px] w-[328px] items-center justify-center rounded-full ${isDark ? 'bg-[#1ED28A]' : 'bg-[#1ED28A]'}`}
-            >
-              {checkingVerification || loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-[14px] font-[600] text-white">Continue</Text>
-              )}
-            </TouchableOpacity>
+              loading={checkingVerification || loading}
+              disabled={!verified || checkingVerification || loading}
+              style={{ width: 328 }}
+            />
           </Animated.View>
         </View>
       </View>

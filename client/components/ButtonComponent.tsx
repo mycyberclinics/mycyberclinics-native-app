@@ -1,47 +1,47 @@
 import React from 'react';
-import { Pressable, Text, useColorScheme, PressableProps } from 'react-native';
+import { Pressable, Text, ActivityIndicator, PressableProps } from 'react-native';
 
 type ButtonProps = {
   onPress: () => void;
   title?: string;
   disabled?: boolean;
+  loading?: boolean;
   style?: any;
   textStyle?: any;
-  loading?: boolean;
 } & Omit<PressableProps, 'onPress'>;
 
 const ButtonComponent: React.FC<ButtonProps> = ({
   onPress,
   title = 'Sign in',
   disabled,
+  loading,
   style,
   textStyle,
   ...rest
 }) => {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || loading}
       className={`
-        w-full items-center justify-center rounded-full py-3
-        ${isDark ? 'bg-button-buttonBG' : 'bg-button-buttonBGLight'}
+        h-[48px] w-full items-center justify-center rounded-full border border-button-signInButtonBorderLight
+        bg-button-buttonBGLight py-3
+        dark:border-button-signInButtonBorderDark dark:bg-button-buttonBG
         ${disabled ? 'opacity-50' : ''}
       `}
       style={style}
       {...rest}
     >
-      <Text
-        className={`
-          text-base font-normal
-          ${isDark ? 'text-black' : 'text-white'}
-        `}
-        style={textStyle}
-      >
-        {title}
-      </Text>
+      {loading ? (
+        <ActivityIndicator color="#fff" />
+      ) : (
+        <Text
+          className="text-center text-[14px] font-[500] text-text-secondaryTextDark dark:text-text-textInverse"
+          style={textStyle}
+        >
+          {title}
+        </Text>
+      )}
     </Pressable>
   );
 };

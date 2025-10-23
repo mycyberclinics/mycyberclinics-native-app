@@ -1,98 +1,86 @@
-import React, { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator, Text } from 'react-native';
+import { Slot, useRouter } from 'expo-router';
+import { onAuthStateChanged, getAuth } from 'firebase/auth';
+import { Toast } from 'react-native-toast-message/lib/src/Toast';
 import { useAuthStore } from '@/store/auth';
-import { ActivityIndicator, View } from 'react-native';
-import { getFirebaseAuth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 
 export default function MainLayout() {
   const router = useRouter();
-  const segments = useSegments() as unknown as string[];
+  const { user, onboarding, lastStep, setUser, initializing, rehydrate } = useAuthStore();
+  const [rehydrated, setRehydrated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  const {
-    user,
-    setUser,
-    initializing,
-    setInitializing,
-    onboarding,
-    lastStep,
-    rehydrate,
-  } = useAuthStore();
-
-  // rehydrate auth state on mount
+  // ✅ Rehydrate Zustand store once on app load
   useEffect(() => {
-    rehydrate();
+    (async () => {
+      try {
+        await rehydrate();
+        setRehydrated(true);
+      } catch (err) {
+        console.error('[MainLayout] Rehydrate error:', err);
+        setRehydrated(true);
+      }
+    })();
   }, [rehydrate]);
 
-  // this watches for changes to Firebase auth changes 
+  // ✅ Firebase Auth state listener
   useEffect(() => {
-    const auth = getFirebaseAuth();
-
-    console.log('[MainLayout] Subscribing to Firebase auth state...');
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
-      if (fbUser) {
-        const { uid, email } = fbUser;
-        console.log('[MainLayout] Firebase user detected:', email);
-        setUser({ id: uid, email: email || '' });
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
       } else {
-        console.log('[MainLayout] No Firebase user.');
         setUser(null);
       }
-
-      setInitializing(false);
+      setCheckingAuth(false);
     });
-
     return () => unsubscribe();
-  }, [setUser, setInitializing]);
+  }, [setUser]);
 
-  // manage navigation logic
+  // ✅ Routing logic based on user, onboarding, and lastStep
   useEffect(() => {
-    if (initializing) return;
+    if (initializing || !rehydrated || checkingAuth) return;
 
-    const inAuthFlow = segments[0] === '(auth)';
-    const inMainFlow = segments[0] === '(main)';
-    const inSignupFlow = inAuthFlow && segments.includes('signup');
-
-    console.log('[MainLayout] Route:', segments.join('/'));
-    console.log('[MainLayout] Auth state:', {
-      user,
-      onboarding,
-      inAuthFlow,
-      inSignupFlow,
-      inMainFlow,
+    console.log('[MainLayout] Deciding navigation...', {
+      user: user?.email,
+      onboarding: false,
+      lastStep: null,
     });
 
-    // if no user yet → redirect to signup
-    if (!user && !inAuthFlow) {
-      console.log('[MainLayout] Redirect → /(auth)/signup/emailPassword (no user)');
-      router.replace('/(auth)/signup/emailPassword');
-      return;
+    try {
+      if (!user) {
+        router.replace('/(auth)/signIn');
+      } else if (onboarding && lastStep) {
+        // Resume from the last onboarding step
+        router.replace(lastStep as any);
+      } else if (onboarding && !lastStep) {
+        // Start onboarding at first step if no lastStep
+        router.replace('/(auth)/signup/emailPassword');
+      } else if (!onboarding) {
+        // Fully onboarded → go home
+        router.replace('/(main)/home');
+      }
+    } catch (err) {
+      console.error('[MainLayout] Routing error:', err);
     }
+  }, [user, onboarding, lastStep, initializing, rehydrated, checkingAuth, router]);
 
-    // if onboarding user - still setting up profile etc.
-    if (user && onboarding && !inSignupFlow) {
-      console.log('[MainLayout] Redirect → lastStep or first signup screen');
-      if (lastStep) router.replace(lastStep as any);
-      else router.replace('/(auth)/signup/emailPassword');
-      return;
-    }
-
-    // if verified & completed onboarding 
-    // watch here. this should be where user first goes home, then contiues signup - bad news ⚡
-    if (user && !onboarding && !inMainFlow) {
-      console.log('[MainLayout] Redirect → /(main)/home');
-      router.replace('/(main)/home');
-      return;
-    }
-  }, [initializing, user, onboarding, lastStep, segments, router]);
-
-  if (initializing) {
+  // ✅ Loader while checking auth or rehydrating
+  if (checkingAuth || initializing || !rehydrated) {
     return (
-      <View className="items-center justify-center flex-1 bg-white">
-        <ActivityIndicator size="large" />
+      <View className="flex-1 items-center justify-center bg-white dark:bg-black">
+        <ActivityIndicator size="large" color="#1ED28A" />
+        <Text className="mt-3 text-gray-500 dark:text-gray-300">Preparing app...</Text>
       </View>
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  // ✅ Default render: slot for children
+  return (
+    <View className="flex-1">
+      <Slot />
+      <Toast position="bottom" />
+    </View>
+  );
 }

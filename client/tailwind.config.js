@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './app/**/*.{js,jsx,ts,tsx}',
     './components/**/*.{js,jsx,ts,tsx}',
@@ -15,7 +16,7 @@ module.exports = {
           buttonBorderLight: '#047857',
           buttonDisabledBG: '#1F2937',
           buttonLight: '#D1D5DB',
-          buttonSecondaryDark: '##D1FAE5',
+          buttonSecondaryDark: '#D1FAE5',
           buttonSecondaryLight: '#D1FAE5',
           signInButtonBorderDark: '#34D399',
           signInButtonBorderLight: '#047857',
@@ -53,6 +54,8 @@ module.exports = {
           arrowBorder: '#374151',
           placeholderTextDark: '#6B7280',
           placeHolderTextLight: '#9CA3AF',
+          circleBtnDark: '#15191E',
+          circleBtnLight: '#F3F4F6',
         },
         boxShadow: {
           'green-soft': '0 4px 10px rgba(30, 210, 138, 0.1)',
