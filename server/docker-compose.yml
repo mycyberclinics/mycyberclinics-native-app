@@ -11,6 +11,7 @@ services:
       - /app/node_modules
     depends_on:
       - mongo
+      - redis
     command: npm run dev
     networks:
       - mycyberclinics-net
@@ -25,8 +26,24 @@ services:
     networks:
       - mycyberclinics-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: mycyberclinics-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mycyberclinics-net
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
 volumes:
   mongo_data:
+  redis_data:
 
 networks:
   mycyberclinics-net:
