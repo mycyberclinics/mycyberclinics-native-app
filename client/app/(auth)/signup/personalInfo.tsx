@@ -10,7 +10,7 @@ import {
   useColorScheme,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Controller, useForm, type SubmitHandler } from 'react-hook-form';
+import { Controller, useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -24,7 +24,11 @@ import api from '@/lib/api/client';
 import Toast from 'react-native-toast-message';
 import { updateProfile } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
+import parseError from '@/utils/parseError';
 
+/**
+ * Schema + Types
+ */
 const ProfileCompletionSchema = BackendUserSchema.pick({
   role: true,
 }).extend({
@@ -91,12 +95,17 @@ export default function PersonalInfoScreen() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Use the typed FormValues for useForm.
+  // TypeScript/react-hook-form can sometimes complain about the resolver generic shape.
+  // Cast the zodResolver to Resolver<FormValues> to align types.
+  const resolver = zodResolver(ProfileCompletionSchema) as unknown as Resolver<FormValues>;
+
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
   } = useForm<FormValues>({
-    resolver: zodResolver(ProfileCompletionSchema),
+    resolver,
     mode: 'onChange',
     defaultValues: {
       displayName: '',
@@ -108,6 +117,51 @@ export default function PersonalInfoScreen() {
     },
   });
 
+  /**
+   * Try endpoints with POST/PUT (keeps network logic resilient while backend path is confirmed)
+   */
+  async function tryEndpointsWithMethods(
+    endpoints: string[],
+    payload: any,
+    headers: Record<string, string | undefined> = {},
+  ) {
+    let lastErr: unknown = null;
+    const methods = ['post', 'put'] as const;
+    for (const ep of endpoints) {
+      for (const method of methods) {
+        try {
+          console.log(`[API] Attempting ${method.toUpperCase()} ${ep} with payload:`, payload, 'headers:', headers);
+          let resp;
+          if (method === 'post') {
+            resp = await api.post(ep, payload, { headers });
+          } else {
+            resp = await api.put(ep, payload, { headers });
+          }
+          console.log(`[API] Success ${method.toUpperCase()} ${ep} →`, {
+            status: resp.status,
+            data: resp.data,
+            headers: resp.headers,
+          });
+          return resp;
+        } catch (err) {
+          lastErr = err;
+          const parsed = parseError(err);
+          const status =
+            parsed.response?.status ??
+            parsed.response?.statusCode ??
+            parsed.response?.status_code ??
+            undefined;
+          console.warn(`[API] ${method.toUpperCase()} ${ep} failed:`, parsed.response ?? parsed.message, 'status:', status);
+          if (status && status !== 404) {
+            throw err;
+          }
+        }
+      }
+    }
+    throw lastErr;
+  }
+
+  // Ensure onSubmit is typed with the same FormValues type
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
       setApiError(null);
@@ -132,8 +186,28 @@ export default function PersonalInfoScreen() {
         bio: '',
       };
 
-      const response = await api.post('/api/profile/complete', payload);
-      console.log('[Profile Complete Response]', response.data);
+      // Attach idToken explicitly
+      let token: string | undefined = undefined;
+      try {
+        token = await currentUser?.getIdToken();
+      } catch (err) {
+        console.warn('[PersonalInfo] failed to get idToken:', err);
+      }
+      const headers = {
+        Authorization: token ? `Bearer ${token}` : undefined,
+        'Content-Type': 'application/json',
+      };
+
+      const endpoints = [
+        '/api/profile/complete',
+        '/profile/complete',
+        '/api/profile',
+        '/profile',
+      ];
+
+      const resp = await tryEndpointsWithMethods(endpoints, payload, headers);
+
+      console.log('[Profile Complete Response]', resp.data);
 
       setOnboardingComplete();
       await syncProfile({ ...data, role: data.role });
@@ -154,16 +228,17 @@ export default function PersonalInfoScreen() {
       if (normalizedRole === 'physician') {
         router.push('/(auth)/signup/doctorCredential');
       } else {
-        await api.post('/profile', data);
         useAuthStore.setState({ onboarding: false });
         console.log('[PersonalInfo] ✅ Onboarding complete, redirecting to home');
-
         router.replace('/(main)/home');
       }
-    } catch (error: any) {
-      console.error('[Personal Info] Error syncing:', error?.response?.data || error);
+    } catch (error) {
+      const e = parseError(error);
+      console.error('[Personal Info] Error syncing:', e.response ?? e.message ?? e.original ?? error);
       const message =
-        error?.response?.data?.error ||
+        e.response?.data?.error ||
+        e.response?.data?.message ||
+        e.message ||
         'Failed to save profile. Please check your internet connection and try again.';
       setApiError(message);
 
@@ -177,11 +252,7 @@ export default function PersonalInfoScreen() {
 
   return (
     <>
-      <Animated.View
-        entering={FadeIn.duration(400)}
-        exiting={FadeOut.duration(200)}
-        style={{ flex: 1 }}
-      >
+      <Animated.View entering={FadeIn.duration(400)} exiting={FadeOut.duration(200)} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
@@ -196,22 +267,16 @@ export default function PersonalInfoScreen() {
                 if (router.canGoBack()) {
                   router.back();
                 } else {
-                  router.replace('/(auth)/signup/personalInfo'); //user shouldn't go back after verifying email
+                  router.replace('/(auth)/signup/personalInfo');
                 }
               }}
               className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
             >
-              <Feather
-                name="arrow-left"
-                size={22}
-                color={colorScheme === 'dark' ? '#F5F5F5' : '#111827'}
-              />
+              <Feather name="arrow-left" size={22} color={colorScheme === 'dark' ? '#F5F5F5' : '#111827'} />
             </Pressable>
 
             <View className="mb-6 mt-4">
-              <Text className="text-[22px] font-[700] text-[#0B1220] dark:text-white">
-                Almost Done 🎉
-              </Text>
+              <Text className="text-[22px] font-[700] text-[#0B1220] dark:text-white">Almost Done 🎉</Text>
               <Text className="mt-2 text-[14px] text-text-secondaryLight dark:text-text-secondaryDark">
                 We’ll personalize your health journey with a few quick details.
               </Text>
@@ -224,238 +289,117 @@ export default function PersonalInfoScreen() {
               render={({ field: { value, onChange } }) => (
                 <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
                   <Feather name="user" size={18} color="#9CA3AF" />
-                  <TextInput
-                    value={value}
-                    onChangeText={onChange}
-                    placeholder="Name"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="default"
-                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
-                  />
+                  <TextInput value={value} onChangeText={onChange} placeholder="Name" placeholderTextColor="#9CA3AF" keyboardType="default" className="flex-1 px-2 py-3 text-gray-900 dark:text-white" />
                 </View>
               )}
             />
-            {errors.displayName && (
-              <Text className="mt-1 text-sm text-red-400">{errors.displayName.message}</Text>
-            )}
+            {errors.displayName && <Text className="mt-1 text-sm text-red-400">{errors.displayName.message}</Text>}
 
-            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
-              Phone number
-            </Text>
+            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Phone number</Text>
             <Controller
               control={control}
               name="phone"
               render={({ field: { value, onChange } }) => (
                 <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
                   <Feather name="phone" size={18} color="#9CA3AF" />
-                  <TextInput
-                    value={value}
-                    onChangeText={onChange}
-                    placeholder="+234 70 896 1234"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="phone-pad"
-                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
-                  />
+                  <TextInput value={value} onChangeText={onChange} placeholder="+234 70 896 1234" placeholderTextColor="#9CA3AF" keyboardType="phone-pad" className="flex-1 px-2 py-3 text-gray-900 dark:text-white" />
                 </View>
               )}
             />
-            {errors.phone && (
-              <Text className="mt-1 text-sm text-red-400">{errors.phone.message}</Text>
-            )}
+            {errors.phone && <Text className="mt-1 text-sm text-red-400">{errors.phone.message}</Text>}
 
             <View className="mt-4">
-              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
-                Date of birth
-              </Text>
-              <Controller
-                control={control}
-                name="dob"
-                render={({ field: { value, onChange } }) => (
-                  <>
-                    <Pressable onPress={() => setShowDatePicker(true)}>
-                      <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
-                        <Feather name="calendar" size={18} color="#9CA3AF" />
-                        <Text className="flex-1 px-2 text-gray-900 dark:text-white">
-                          {value ? value.toDateString() : 'Select date of birth'}
-                        </Text>
-                        <Feather name="chevron-down" size={18} color="#9CA3AF" />
-                      </View>
-                    </Pressable>
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={value || new Date()}
-                        mode="date"
-                        display="spinner"
-                        maximumDate={new Date()}
-                        onChange={(_, date) => {
-                          setShowDatePicker(false);
-                          if (date) onChange(date);
-                        }}
-                      />
-                    )}
-                  </>
-                )}
-              />
-              {errors.dob && (
-                <Text className="mt-1 text-sm text-red-400">{errors.dob.message}</Text>
-              )}
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Date of birth</Text>
+              <Controller control={control} name="dob" render={({ field: { value, onChange } }) => (
+                <>
+                  <Pressable onPress={() => setShowDatePicker(true)}>
+                    <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
+                      <Feather name="calendar" size={18} color="#9CA3AF" />
+                      <Text className="flex-1 px-2 text-gray-900 dark:text-white">{value ? value.toDateString() : 'Select date of birth'}</Text>
+                      <Feather name="chevron-down" size={18} color="#9CA3AF" />
+                    </View>
+                  </Pressable>
+                  {showDatePicker && (
+                    <DateTimePicker value={value || new Date()} mode="date" display="spinner" maximumDate={new Date()} onChange={(_, date) => { setShowDatePicker(false); if (date) onChange(date); }} />
+                  )}
+                </>
+              )} />
+              {errors.dob && <Text className="mt-1 text-sm text-red-400">{errors.dob.message}</Text>}
             </View>
 
             <View className="mt-4">
-              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
-                Gender
-              </Text>
-              <Controller
-                control={control}
-                name="gender"
-                render={({ field: { value, onChange } }) => (
-                  <>
-                    <Pressable onPress={() => setGenderOpen((s) => !s)}>
-                      <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
-                        <Feather name="user" size={18} color="#9CA3AF" />
-                        <Text className="flex-1 px-2 text-gray-900 dark:text-white">
-                          {value || 'Select Gender'}
-                        </Text>
-                        <Feather
-                          name={genderOpen ? 'chevron-up' : 'chevron-down'}
-                          size={18}
-                          color="#9CA3AF"
-                        />
-                      </View>
-                    </Pressable>
-                    {genderOpen && (
-                      <Animated.View
-                        entering={FadeIn.duration(300)}
-                        exiting={FadeOut.duration(200)}
-                        className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]"
-                      >
-                        {genderOptions.map((g) => (
-                          <Pressable
-                            key={g}
-                            onPress={() => {
-                              onChange(g);
-                              setGenderOpen(false);
-                            }}
-                            className="flex-row items-center gap-2 px-3 py-2"
-                          >
-                            <Feather
-                              name={value === g ? 'check-square' : 'square'}
-                              size={18}
-                              color={value === g ? '#1ED28A' : '#9CA3AF'}
-                            />
-                            <Text className="text-[14px] text-gray-900 dark:text-white">{g}</Text>
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Gender</Text>
+              <Controller control={control} name="gender" render={({ field: { value, onChange } }) => (
+                <>
+                  <Pressable onPress={() => setGenderOpen((s) => !s)}>
+                    <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
+                      <Feather name="user" size={18} color="#9CA3AF" />
+                      <Text className="flex-1 px-2 text-gray-900 dark:text-white">{value || 'Select Gender'}</Text>
+                      <Feather name={genderOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#9CA3AF" />
+                    </View>
+                  </Pressable>
+                  {genderOpen && (
+                    <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]">
+                      {genderOptions.map((g) => (
+                        <Pressable key={g} onPress={() => { onChange(g); setGenderOpen(false); }} className="flex-row items-center gap-2 px-3 py-2">
+                          <Feather name={value === g ? 'check-square' : 'square'} size={18} color={value === g ? '#1ED28A' : '#9CA3AF'} />
+                          <Text className="text-[14px] text-gray-900 dark:text-white">{g}</Text>
+                        </Pressable>
+                      ))}
+                    </Animated.View>
+                  )}
+                </>
+              )} />
+            </View>
+
+            <View className="mt-4">
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Location</Text>
+              <Controller control={control} name="location" render={({ field: { onChange } }) => (
+                <>
+                  <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
+                    <Feather name="map-pin" size={18} color="#9CA3AF" />
+                    <TextInput value={query} onChangeText={(text) => { setQuery(text); onChange(text); }} placeholder="Type to search location" placeholderTextColor="#9CA3AF" className="flex-1 px-2 py-3 text-gray-900 dark:text-white" />
+                  </View>
+
+                  {loadingSuggestions ? (
+                    <View className="py-3"><ActivityIndicator color="#1ED28A" /></View>
+                  ) : (
+                    suggestions.length > 0 && (
+                      <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]">
+                        {suggestions.map((item) => (
+                          <Pressable key={item.place_id} onPress={() => { onChange(item.description); setQuery(item.description); setSuggestions([]); }} className="px-3 py-2">
+                            <Text className="text-[14px] text-gray-900 dark:text-white">{item.description}</Text>
                           </Pressable>
                         ))}
                       </Animated.View>
-                    )}
-                  </>
-                )}
-              />
-            </View>
-
-            <View className="mt-4">
-              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
-                Location
-              </Text>
-              <Controller
-                control={control}
-                name="location"
-                render={({ field: { onChange } }) => (
-                  <>
-                    <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
-                      <Feather name="map-pin" size={18} color="#9CA3AF" />
-                      <TextInput
-                        value={query}
-                        onChangeText={(text) => {
-                          setQuery(text);
-                          onChange(text);
-                        }}
-                        placeholder="Type to search location"
-                        placeholderTextColor="#9CA3AF"
-                        className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
-                      />
-                    </View>
-
-                    {loadingSuggestions ? (
-                      <View className="py-3">
-                        <ActivityIndicator color="#1ED28A" />
-                      </View>
-                    ) : (
-                      suggestions.length > 0 && (
-                        <Animated.View
-                          entering={FadeIn.duration(300)}
-                          exiting={FadeOut.duration(200)}
-                          className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]"
-                        >
-                          {suggestions.map((item) => (
-                            <Pressable
-                              key={item.place_id}
-                              onPress={() => {
-                                onChange(item.description);
-                                setQuery(item.description);
-                                setSuggestions([]);
-                              }}
-                              className="px-3 py-2"
-                            >
-                              <Text className="text-[14px] text-gray-900 dark:text-white">
-                                {item.description}
-                              </Text>
-                            </Pressable>
-                          ))}
-                        </Animated.View>
-                      )
-                    )}
-                  </>
-                )}
-              />
+                    )
+                  )}
+                </>
+              )} />
             </View>
 
             <View className="mt-6">
-              <Text className="mb-3 text-[14px] font-[500] text-gray-900 dark:text-white">
-                Account Type
-              </Text>
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Account Type</Text>
               <View className="flex-row gap-3">
                 {(['patient', 'doctor'] as const).map((role) => (
-                  <Controller
-                    key={role}
-                    control={control}
-                    name="role"
-                    render={({ field: { value, onChange } }) => {
-                      const selected = value === role;
-                      return (
-                        <Pressable
-                          onPress={() => onChange(role)}
-                          className={`h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-[20px] border ${
-                            selected
-                              ? 'border-[#1ED28A] bg-[#1ED28A]/10'
-                              : 'border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]'
-                          }`}
-                        >
-                          <Checkbox
-                            value={selected}
-                            onValueChange={() => onChange(role)}
-                            color="#10B981"
-                          />
-                          <Text className="text-[14px] font-[500] text-gray-900 dark:text-white">
-                            {role === 'doctor' ? 'Physician' : 'Patient'}
-                          </Text>
-                        </Pressable>
-                      );
-                    }}
-                  />
+                  <Controller key={role} control={control} name="role" render={({ field: { value, onChange } }) => {
+                    const selected = value === role;
+                    return (
+                      <Pressable onPress={() => onChange(role)} className={`h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-[20px] border ${selected ? 'border-[#1ED28A] bg-[#1ED28A]/10' : 'border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]'}`}>
+                        <Checkbox value={selected} onValueChange={() => onChange(role)} color="#10B981" />
+                        <Text className="text-[14px] font-[500] text-gray-900 dark:text-white">{role === 'doctor' ? 'Physician' : 'Patient'}</Text>
+                      </Pressable>
+                    );
+                  }} />
                 ))}
               </View>
             </View>
 
             <View className="mb-8 mt-10 items-center">
-              <ButtonComponent
-                title="Continue"
-                onPress={handleSubmit(onSubmit)}
-                disabled={!isValid || isSubmitting}
-                loading={isSubmitting}
-                style={{ width: 328, borderRadius: 999 }}
-              />
+              <ButtonComponent title="Continue" onPress={handleSubmit(onSubmit)} disabled={!isValid || isSubmitting} loading={isSubmitting} style={{ width: 328, borderRadius: 999 }} />
             </View>
+
+            {apiError && <Text className="mb-4 text-sm text-red-500">{apiError}</Text>}
           </View>
         </ScrollView>
       </Animated.View>
