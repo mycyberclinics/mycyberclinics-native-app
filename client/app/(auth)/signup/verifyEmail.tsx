@@ -14,7 +14,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getFirebaseAuth } from '@/lib/firebase';
-import { sendEmailVerification, reload } from 'firebase/auth';
+import { reload, sendEmailVerification } from 'firebase/auth';
 import { useAuthStore } from '@/store/auth';
 import Animated, {
   useSharedValue,
@@ -26,20 +26,22 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 import ButtonComponent from '@/components/ButtonComponent';
+import api from '@/lib/api/client';
 
-const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
-  url: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN_DYNAMIC_LINK as string,
-  handleCodeInApp: true,
-  iOS: { bundleId: 'com.mycyberclinics.app' },
-  android: { packageName: 'com.mycyberclinics.app', installApp: true },
-};
+// const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
+//   url: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN_DYNAMIC_LINK as string,
+//   handleCodeInApp: true,
+//   iOS: { bundleId: 'com.mycyberclinics.app' },
+//   android: { packageName: 'com.mycyberclinics.app', installApp: true },
+// };
 
 export default function ConfirmEmailScreen() {
   const router = useRouter();
   useTrackOnboardingStep();
 
   const auth = getFirebaseAuth();
-  const { user, loading, setLoading } = useAuthStore();
+  const { user, loading, setLoading, verificationSentByBackend, setVerificationSentByBackend } =
+    useAuthStore();
 
   const [resending, setResending] = useState(false);
   const [resendCooldownSec, setResendCooldownSec] = useState(0);
@@ -88,23 +90,13 @@ export default function ConfirmEmailScreen() {
       setCheckingVerification(false);
       setLoading(false);
     }
-  }, []);
+  }, [auth, setLoading]);
 
-  // send initial verification on mount
   useEffect(() => {
-    const current = auth.currentUser;
-    if (current && !current.emailVerified) {
-      sendEmailVerification(current, actionCodeSettings).catch((err: any) => {
-        if (err?.code === 'auth/too-many-requests') {
-          console.warn('[ConfirmEmail] skipped initial send: too many requests');
-        } else {
-          console.error('[ConfirmEmail] initial sendEmailVerification', err);
-        }
-      });
-    }
-  }, []);
+    setVerified(!!auth.currentUser?.emailVerified);
+  }, [auth]);
 
-  // resend handler with cooldown
+  // resend handler with cooldown (uses single explicit backend endpoint)
   const handleResend = async () => {
     const current = auth.currentUser;
     if (!current) {
@@ -114,18 +106,41 @@ export default function ConfirmEmailScreen() {
 
     try {
       setResending(true);
-      await sendEmailVerification(current, actionCodeSettings);
-      setResendCooldownSec(30);
-      Alert.alert('Verification Sent', 'A verification link was sent to your email.');
-    } catch (err) {
-      console.error('[ConfirmEmail] resend error', err);
-      Alert.alert('Error', 'Could not resend verification email.');
+
+      if (verificationSentByBackend) {
+        // Ask backend to resend via the explicit endpoint that signUp expects
+        try {
+          console.log('[ConfirmEmail] Requesting backend resend: /api/signup/resend', { email: current.email });
+          const r = await api.post('/api/resend-verification', { email: current.email, firebaseUid: current.uid });
+          if (r && r.status >= 200 && r.status < 300) {
+            setResendCooldownSec(30);
+            Alert.alert('Verification Sent', 'A verification link was (re)sent via backend.');
+            setVerificationSentByBackend(true);
+            return;
+          } else {
+            console.warn('[ConfirmEmail] backend resend returned non-OK', r.status, r.data);
+            Alert.alert('Error', 'Backend resend returned unexpected response.');
+          }
+        } catch (err: any) {
+          console.error('[ConfirmEmail] backend resend error', err?.response ?? err?.message ?? err);
+          Alert.alert('Error', 'Could not ask backend to resend verification email.');
+        }
+      }
+
+      // fallback to Firebase if backend not used or failed
+      try {
+        await sendEmailVerification(current);
+        setResendCooldownSec(30);
+        Alert.alert('Verification Sent', 'A verification link was sent to your email (Firebase).');
+      } catch (err: any) {
+        console.error('[ConfirmEmail] firebase resend error', err);
+        Alert.alert('Error', 'Failed to resend verification via Firebase.');
+      }
     } finally {
       setResending(false);
     }
   };
 
-  // cooldown countdown
   useEffect(() => {
     if (resendCooldownSec <= 0) return;
     const t = setInterval(() => {
@@ -140,7 +155,6 @@ export default function ConfirmEmailScreen() {
     return () => clearInterval(t);
   }, [resendCooldownSec]);
 
-  // handle deep links and app resume
   useEffect(() => {
     const urlListener = ({ url }: { url: string }) => {
       console.log('[ConfirmEmail] Linking url received:', url);
@@ -172,13 +186,11 @@ export default function ConfirmEmailScreen() {
       return;
     }
 
-    // When verification confirmed:
     const auth = getFirebaseAuth();
-    await auth.currentUser?.getIdToken(true); // ✅ Force refresh token
+    await auth.currentUser?.getIdToken(true); // Force refresh token
     console.log('[ConfirmEmail] Token refreshed after verification');
 
     try {
-      console.log('[ConfirmEmail] continuing to personal info screen');
       router.replace('/(auth)/signup/personalInfo');
     } catch (err) {
       console.error('[ConfirmEmail] continue error', err);
@@ -219,11 +231,11 @@ export default function ConfirmEmailScreen() {
               </Text>
 
               <Text className="mt-2 w-[281px] text-center text-[14px] leading-6 text-[#4B5563] dark:text-[#D1D5DB]">
-                Click on the link sent to the email (
+                Click the link sent to the email{' '}
                 <Text className="font-[600] text-text-accentLight dark:text-text-accentDark">
                   {user?.email ?? '(your email)'}
                 </Text>
-                ) you provided.
+                .
               </Text>
 
               {linkDetectedMessage && (

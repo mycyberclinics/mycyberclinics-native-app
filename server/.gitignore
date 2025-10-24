@@ -1,5 +1,6 @@
 ### Node / TypeScript / Project files
 node_modules/
+uploads/
 dist/
 build/
 /.turbo
@@ -58,3 +59,8 @@ temp/
 *.key
 *.pem
 *.p12
+
+# Firebase emulators data
+firebase-debug.log
+firebase-emulator-debug.log
+firebase-data/

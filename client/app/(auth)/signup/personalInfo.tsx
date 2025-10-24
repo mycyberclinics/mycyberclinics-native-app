@@ -10,7 +10,7 @@ import {
   useColorScheme,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Controller, useForm, type SubmitHandler } from 'react-hook-form';
+import { Controller, useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -24,8 +24,14 @@ import api from '@/lib/api/client';
 import Toast from 'react-native-toast-message';
 import { updateProfile } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
+
 import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 
+import parseError from '@/utils/parseError';
+
+/**
+ * Schema + Types
+ */
 const ProfileCompletionSchema = BackendUserSchema.pick({
   role: true,
 }).extend({
@@ -93,12 +99,17 @@ export default function PersonalInfoScreen() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Use the typed FormValues for useForm.
+  // TypeScript/react-hook-form can sometimes complain about the resolver generic shape.
+  // Cast the zodResolver to Resolver<FormValues> to align types.
+  const resolver = zodResolver(ProfileCompletionSchema) as unknown as Resolver<FormValues>;
+
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
   } = useForm<FormValues>({
-    resolver: zodResolver(ProfileCompletionSchema),
+    resolver,
     mode: 'onChange',
     defaultValues: {
       displayName: '',
@@ -110,6 +121,61 @@ export default function PersonalInfoScreen() {
     },
   });
 
+  /**
+   * Try endpoints with POST/PUT (keeps network logic resilient while backend path is confirmed)
+   */
+  async function tryEndpointsWithMethods(
+    endpoints: string[],
+    payload: any,
+    headers: Record<string, string | undefined> = {},
+  ) {
+    let lastErr: unknown = null;
+    const methods = ['post', 'put'] as const;
+    for (const ep of endpoints) {
+      for (const method of methods) {
+        try {
+          console.log(
+            `[API] Attempting ${method.toUpperCase()} ${ep} with payload:`,
+            payload,
+            'headers:',
+            headers,
+          );
+          let resp;
+          if (method === 'post') {
+            resp = await api.post(ep, payload, { headers });
+          } else {
+            resp = await api.put(ep, payload, { headers });
+          }
+          console.log(`[API] Success ${method.toUpperCase()} ${ep} →`, {
+            status: resp.status,
+            data: resp.data,
+            headers: resp.headers,
+          });
+          return resp;
+        } catch (err) {
+          lastErr = err;
+          const parsed = parseError(err);
+          const status =
+            parsed.response?.status ??
+            parsed.response?.statusCode ??
+            parsed.response?.status_code ??
+            undefined;
+          console.warn(
+            `[API] ${method.toUpperCase()} ${ep} failed:`,
+            parsed.response ?? parsed.message,
+            'status:',
+            status,
+          );
+          if (status && status !== 404) {
+            throw err;
+          }
+        }
+      }
+    }
+    throw lastErr;
+  }
+
+  // Ensure onSubmit is typed with the same FormValues type
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
       setApiError(null);
@@ -134,8 +200,27 @@ export default function PersonalInfoScreen() {
         bio: '',
       };
 
-      const response = await api.post('/api/profile/complete', payload); 
-      console.log('[Profile Complete Response]', response.data);
+      // <<<<<<< HEAD
+      //       const response = await api.post('/api/profile/complete', payload);
+      //       console.log('[Profile Complete Response]', response.data);
+
+      // Attach idToken explicitly
+      let token: string | undefined = undefined;
+      try {
+        token = await currentUser?.getIdToken();
+      } catch (err) {
+        console.warn('[PersonalInfo] failed to get idToken:', err);
+      }
+      const headers = {
+        Authorization: token ? `Bearer ${token}` : undefined,
+        'Content-Type': 'application/json',
+      };
+
+      const endpoints = ['/api/profile/complete', '/profile/complete', '/api/profile', '/profile'];
+
+      const resp = await tryEndpointsWithMethods(endpoints, payload, headers);
+
+      console.log('[Profile Complete Response]', resp.data);
 
       setOnboardingComplete();
       await syncProfile({ ...data, role: data.role });
@@ -156,16 +241,20 @@ export default function PersonalInfoScreen() {
       if (normalizedRole === 'physician') {
         router.push('/(auth)/signup/doctorCredential');
       } else {
-        // await api.post('/profile', data);
         useAuthStore.setState({ onboarding: false });
         console.log('[PersonalInfo] ✅ Onboarding complete, redirecting to home');
-
         router.replace('/(main)/home');
       }
-    } catch (error: any) {
-      console.error('[Personal Info] Error syncing:', error?.response?.data || error);
+    } catch (error) {
+      const e = parseError(error);
+      console.error(
+        '[Personal Info] Error syncing:',
+        e.response ?? e.message ?? e.original ?? error,
+      );
       const message =
-        error?.response?.data?.error ||
+        e.response?.data?.error ||
+        e.response?.data?.message ||
+        e.message ||
         'Failed to save profile. Please check your internet connection and try again.';
       setApiError(message);
 
@@ -198,7 +287,7 @@ export default function PersonalInfoScreen() {
                 if (router.canGoBack()) {
                   router.back();
                 } else {
-                  router.replace('/(auth)/signup/personalInfo'); //user shouldn't go back after verifying email
+                  router.replace('/(auth)/signup/personalInfo');
                 }
               }}
               className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
@@ -214,12 +303,15 @@ export default function PersonalInfoScreen() {
               <Text className="text-[22px] font-[700] text-[#0B1220] dark:text-white">
                 Almost Done 🎉
               </Text>
+
               <Text className="mt-2 text-[14px] text-text-secondaryLight dark:text-text-secondaryDark">
                 We’ll personalize your health journey with a few quick details.
               </Text>
             </View>
 
-            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Full Name</Text>
+            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
+              Full Name
+            </Text>
             <Controller
               control={control}
               name="displayName"
@@ -233,6 +325,15 @@ export default function PersonalInfoScreen() {
                     placeholderTextColor="#9CA3AF"
                     keyboardType="default"
                     className="flex-1 px-2 py-3 mb-2 text-gray-900 dark:text-white"
+                  />
+
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="Name"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="default"
+                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
                   />
                 </View>
               )}
@@ -413,7 +514,7 @@ export default function PersonalInfoScreen() {
             </View>
 
             <View className="mt-6">
-              <Text className="mb-3 text-[14px] font-[500] text-gray-900 dark:text-white">
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
                 Account Type
               </Text>
               <View className="flex-row gap-3">
@@ -427,11 +528,7 @@ export default function PersonalInfoScreen() {
                       return (
                         <Pressable
                           onPress={() => onChange(role)}
-                          className={`h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-[20px] border ${
-                            selected
-                              ? 'border-[#1ED28A] bg-[#1ED28A]/10'
-                              : 'border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]'
-                          }`}
+                          className={`h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-[20px] border ${selected ? 'border-[#1ED28A] bg-[#1ED28A]/10' : 'border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]'}`}
                         >
                           <Checkbox
                             value={selected}
@@ -458,6 +555,8 @@ export default function PersonalInfoScreen() {
                 style={{ width: 328, borderRadius: 999 }}
               />
             </View>
+
+            {apiError && <Text className="mb-4 text-sm text-red-500">{apiError}</Text>}
           </View>
         </ScrollView>
       </Animated.View>

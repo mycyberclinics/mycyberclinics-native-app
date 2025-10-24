@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, ScrollView, useColorScheme, Pressable } from 'react-native';
+import { View, Text, TextInput, ScrollView, useColorScheme, Pressable, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,19 +12,19 @@ import { SignupFormSchema } from '@/lib/schemas/user';
 import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 import ButtonComponent from '@/components/ButtonComponent';
 
-// Firebase dynamic link settings
+/**
+ * Note:
+ * - We do NOT automatically call Firebase's sendEmailVerification here if the backend already
+ *   sent the custom SendGrid template. The backend should already have been called in signUp.
+ * - We keep a fallback to call Firebase when verificationSentByBackend is false.
+ */
+
 const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
   url: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN_DYNAMIC_LINK as string,
   handleCodeInApp: true,
   iOS: { bundleId: 'com.mycyberclinics.app' },
   android: { packageName: 'com.mycyberclinics.app', installApp: true },
 };
-// const actionCodeSettings: ActionCodeSettings = {
-//   url: 'https://mycyberclinics.page.link/verifyEmail', // Must match your Firebase Console config
-//   handleCodeInApp: true,
-//   iOS: { bundleId: 'com.mycyberclinics.app' },
-//   android: { packageName: 'com.mycyberclinics.app', installApp: true },
-// };
 
 const Step3Schema = SignupFormSchema.extend({
   confirmPassword: z.string().min(1, 'Please confirm your password'),
@@ -42,7 +42,8 @@ export default function ConfirmPasswordScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
 
-  const { tempEmail, tempPassword, setTempPassword, loading } = useAuthStore();
+  const { tempEmail, tempPassword, setTempPassword, loading, verificationSentByBackend } =
+    useAuthStore();
 
   const {
     control,
@@ -64,7 +65,7 @@ export default function ConfirmPasswordScreen() {
     if (tempPassword) setValue('password', tempPassword);
   }, [tempEmail, tempPassword, setValue]);
 
-  // Submit: confirm password + send verification
+  // Submit: confirm password + decide whether to send verification
   const onSubmit = async (data: FormValues) => {
     setTempPassword(data.confirmPassword);
 
@@ -73,13 +74,27 @@ export default function ConfirmPasswordScreen() {
       const current = auth.currentUser;
 
       if (current) {
-        await sendEmailVerification(current, actionCodeSettings);
-        console.log('[ConfirmPassword] Verification email requested');
+        if (verificationSentByBackend) {
+          // Backend already sent a custom template. Don't call Firebase default.
+          console.log(
+            '[ConfirmPassword] Backend sent verification email — skipping client sendEmailVerification',
+          );
+        } else {
+          // Fallback: call Firebase's sendEmailVerification (default template)
+          try {
+            await sendEmailVerification(current, actionCodeSettings);
+            console.log('[ConfirmPassword] Verification email requested (Firebase default)');
+            Alert.alert('Verification sent', 'A Firebase verification email has been sent.');
+          } catch (err: any) {
+            console.error('[ConfirmPassword] sendEmailVerification error', err);
+            Alert.alert('Error', 'Could not send verification email. Please try again later.');
+          }
+        }
       } else {
         console.warn('[ConfirmPassword] No current user to send verification to');
       }
     } catch (err) {
-      console.error('[ConfirmPassword] sendEmailVerification error', err);
+      console.error('[ConfirmPassword] unexpected error', err);
     }
 
     router.push('/(auth)/signup/verifyEmail');

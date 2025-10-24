@@ -1,109 +1,122 @@
-import axios from 'axios';
-import { getFirebaseAuth } from '@/lib/firebase';
-import * as SecureStore from 'expo-secure-store';
-import { BackendUserSchema } from '@/lib/schemas/user';
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios';
+import { Platform } from 'react-native';
+import { getFirebaseAuth } from '../firebase';
+import { apiBaseUrl as fallbackApiBaseUrl } from './apiConfig';
 
-const TOKEN_KEY = 'mc_firebase_id_token';
+/**
+ * Resolve base URL:
+ * Preference order:
+ * 1. process.env.EXPO_PUBLIC_API_BASE_URL (set in .env / EAS / runtime)
+ * 2. fallbackApiBaseUrl (from lib/api/apiConfig.ts which handles platform specifics)
+ * 3. hardcoded localhost fallback
+ */
+const resolvedBaseUrl =
+  (process.env.EXPO_PUBLIC_API_BASE_URL && String(process.env.EXPO_PUBLIC_API_BASE_URL).trim()) ||
+  fallbackApiBaseUrl ||
+  (() => {
+    if (Platform.OS === 'android') return 'http://10.0.2.2:4000';
+    if (Platform.OS === 'ios' || Platform.OS === 'web') return 'http://localhost:4000';
+    return 'http://localhost:4000';
+  })();
 
-const api = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_BASE_URL,
-  timeout: 25000,
+console.log('[API CLIENT] Base URL:', resolvedBaseUrl);
+
+/**
+ * Create axios instance
+ */
+const api: AxiosInstance = axios.create({
+  baseURL: resolvedBaseUrl,
+  timeout: 30_000,
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
 });
 
-// Request interceptor
-api.interceptors.request.use(async (config) => {
-  config.headers = config.headers || {};
-
-  try {
-    const auth = getFirebaseAuth();
-    const user = auth.currentUser;
-
-    if (user) {
-      try {
-        const token = await user.getIdToken(true); // pass true to force refresh
-        config.headers.Authorization = `Bearer ${token}`;
-        return config;
-      } catch (err: any) {
-        const code = err?.code || err?.message || '';
-        console.warn('[API] getIdToken(true) failed', code);
-
-        if (code.includes('auth/invalid-credential')) {
-          try {
-            await SecureStore.deleteItemAsync(TOKEN_KEY);
-          } catch (e) {
-            console.warn('[API] SecureStore delete failed', e);
-          }
-
-          try {
-            await auth.signOut?.();
-          } catch (e) {
-            console.warn('[API] signOut after invalid credential failed', e);
-          }
-
-          return config;
-        }
-
-        // fallback to stored token
-        const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
-        if (storedToken) config.headers.Authorization = `Bearer ${storedToken}`;
-        return config;
-      }
-    }
-
-    const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
-    if (storedToken) config.headers.Authorization = `Bearer ${storedToken}`;
-  } catch (err) {
-    console.warn('[API] Token attach error:', err);
-  }
-
-  console.log('[DEBUG] OUTGOING HEADERS:', config.headers);
-  return config;
-});
-
-// Response interceptor
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    console.error('[API] Error:', error?.message ?? error);
-
-    if (error.response?.status === 401) {
-      console.warn('[API] Unauthorized — clearing auth');
+/**
+ * Request interceptor:
+ * - Attaches Authorization header with current Firebase ID token when available.
+ */
+api.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig) => {
+    try {
       const auth = getFirebaseAuth();
-      try {
-        await auth.signOut?.();
-      } catch (e) {
-        console.warn('[API] signOut failed:', e);
+      const user = auth.currentUser;
+      if (user) {
+        const token = await user.getIdToken();
+        if (token) {
+          if (!config.headers) config.headers = {} as any;
+          (config.headers as any)['Authorization'] = `Bearer ${token}`;
+        }
       }
+    } catch (err: any) {
+      console.warn('[API CLIENT] Failed to attach ID token to request', err?.message ?? err);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
 
-      // Clear local user store
-      const { reset } = require('@/store/auth').useAuthStore.getState();
-      reset();
+/**
+ * Response interceptor:
+ * - If we receive 401, attempt a single forced refresh of the Firebase ID token and retry the request once.
+ * - Mark retried requests with config._retry to avoid infinite loops.
+ */
+api.interceptors.response.use(
+  (response: AxiosResponse) => response,
+  async (error: AxiosError & { config?: InternalAxiosRequestConfig }) => {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
-      // Toast feedback
-      import('react-native-toast-message').then(({ default: Toast }) => {
-        Toast.show({
-          type: 'info',
-          text1: 'Session expired',
-          text2: 'Please sign in again to continue.',
-          visibilityTime: 3000,
-        });
-      });
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      try {
+        originalRequest._retry = true;
+        const auth = getFirebaseAuth();
+        const user = auth.currentUser;
+        if (user) {
+          const freshToken = await user.getIdToken(true);
+          if (freshToken) {
+            if (!originalRequest.headers) originalRequest.headers = {} as any;
+            (originalRequest.headers as any)['Authorization'] = `Bearer ${freshToken}`;
+            console.log('[API CLIENT] Retrying request after forced token refresh');
+            return api(originalRequest);
+          }
+        }
+      } catch (refreshErr: any) {
+        console.warn(
+          '[API CLIENT] Token refresh failed during retry',
+          refreshErr?.message ?? refreshErr,
+        );
+      }
     }
 
     return Promise.reject(error);
   },
 );
 
+/**
+ * Helper: fetchProfile
+ */
 export async function fetchProfile() {
   try {
-    const response = await api.get('/api/profile');
-    const user = BackendUserSchema.parse(response.data);
-    console.log('[API] profile parsed:', user);
-    return user;
-  } catch (error) {
-    console.error('[API] profile fetch failed', error);
-    throw error;
+    const resp = await api.get('/api/profile');
+    return resp.data;
+  } catch (err) {
+    console.error('[API CLIENT] fetchProfile error:', err);
+    throw err;
   }
+}
+
+/**
+ * Small convenience: allow runtime override of baseURL (useful for debug)
+ */
+export function setBaseUrl(url: string) {
+  api.defaults.baseURL = url;
+  console.log('[API CLIENT] baseURL overridden to', url);
 }
 
 export default api;
