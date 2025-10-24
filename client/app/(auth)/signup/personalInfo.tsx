@@ -24,6 +24,7 @@ import api from '@/lib/api/client';
 import Toast from 'react-native-toast-message';
 import { updateProfile } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
+import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 
 const ProfileCompletionSchema = BackendUserSchema.pick({
   role: true,
@@ -38,6 +39,7 @@ const ProfileCompletionSchema = BackendUserSchema.pick({
 type FormValues = z.infer<typeof ProfileCompletionSchema>;
 
 export default function PersonalInfoScreen() {
+  useTrackOnboardingStep();
   const router = useRouter();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -132,7 +134,7 @@ export default function PersonalInfoScreen() {
         bio: '',
       };
 
-      const response = await api.post('/api/profile/complete', payload);
+      const response = await api.post('/api/profile/complete', payload); 
       console.log('[Profile Complete Response]', response.data);
 
       setOnboardingComplete();
@@ -154,7 +156,7 @@ export default function PersonalInfoScreen() {
       if (normalizedRole === 'physician') {
         router.push('/(auth)/signup/doctorCredential');
       } else {
-        await api.post('/profile', data);
+        // await api.post('/profile', data);
         useAuthStore.setState({ onboarding: false });
         console.log('[PersonalInfo] ✅ Onboarding complete, redirecting to home');
 
@@ -208,7 +210,7 @@ export default function PersonalInfoScreen() {
               />
             </Pressable>
 
-            <View className="mb-6 mt-4">
+            <View className="mt-4 mb-6">
               <Text className="text-[22px] font-[700] text-[#0B1220] dark:text-white">
                 Almost Done 🎉
               </Text>
@@ -217,7 +219,7 @@ export default function PersonalInfoScreen() {
               </Text>
             </View>
 
-            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Name</Text>
+            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Full Name</Text>
             <Controller
               control={control}
               name="displayName"
@@ -230,7 +232,7 @@ export default function PersonalInfoScreen() {
                     placeholder="Name"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="default"
-                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
+                    className="flex-1 px-2 py-3 mb-2 text-gray-900 dark:text-white"
                   />
                 </View>
               )}
@@ -447,7 +449,7 @@ export default function PersonalInfoScreen() {
               </View>
             </View>
 
-            <View className="mb-8 mt-10 items-center">
+            <View className="items-center mt-10 mb-8">
               <ButtonComponent
                 title="Continue"
                 onPress={handleSubmit(onSubmit)}

@@ -7,6 +7,7 @@ export function useUser() {
     queryKey: ['userProfile'],
     queryFn: async () => {
       const user = await fetchProfile();
+      console.log('[Tanstak Query] Unable to fetch user profile');
       return BackendUserSchema.parse(user);
     },
   });

@@ -88,6 +88,7 @@ import { ClaimsProvider } from '@/providers/ClaimsProvider';
 import { useAuthStore } from '@/store/auth';
 import DebugBanner from '@/components/DebuggerBanner';
 
+
 LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 
 export default function RootLayout() {

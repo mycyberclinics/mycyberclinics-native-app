@@ -12,7 +12,7 @@
 //   type SharedValue,
 // } from 'react-native-reanimated';
 // import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { useAuthStore } from '@/store/auth'; // <-- import store
+// import { useAuthStore } from '@/store/auth';
 
 // import OnboardingScreen from '@/app/(onboarding)/onboardingScreen1';
 // import OnboardingScreen2 from '@/app/(onboarding)/onboardingScreen2';

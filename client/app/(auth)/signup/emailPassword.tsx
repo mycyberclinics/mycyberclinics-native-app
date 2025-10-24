@@ -15,7 +15,7 @@ type Step1FormValues = z.infer<typeof Step1Schema>;
 
 export default function Step1Screen() {
   const router = useRouter();
-  useTrackOnboardingStep(); // tracks current onboarding step
+  useTrackOnboardingStep(); 
   const colorScheme = useColorScheme();
 
   const {

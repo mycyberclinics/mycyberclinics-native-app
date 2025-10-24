@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/auth';
 import api from '@/lib/api/client';
 import ButtonComponent from '@/components/ButtonComponent';
 import { getFirebaseAuth } from '@/lib/firebase';
+import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 
 type UploadedFile = {
   name: string;
@@ -19,6 +20,7 @@ type UploadedFile = {
 
 export default function DoctorCredentialScreen() {
   const router = useRouter();
+  useTrackOnboardingStep();
   const { completeSignUp, syncProfile, setOnboardingComplete } = useAuthStore();
 
   const colorScheme = useColorScheme();
@@ -103,7 +105,7 @@ export default function DoctorCredentialScreen() {
       // mark onboarding complete (sets onboarding=false, etc.)
       setOnboardingComplete();
 
-      // optional: ensure profile sync after docs uploaded
+      // ensure profile sync after docs uploaded
       await syncProfile({ bio });
 
       // mark app state clean
@@ -146,7 +148,7 @@ export default function DoctorCredentialScreen() {
             </Pressable>
           </View>
 
-          <View className="mb-4 mt-6">
+          <View className="mt-6 mb-4">
             <Text className="text-[18px] font-[700] text-[#0B1220] dark:text-white">
               Hi Doctor, Verify Your Medical Credentials
             </Text>
@@ -240,7 +242,7 @@ export default function DoctorCredentialScreen() {
             )}
           </View>
 
-          <View className="mb-6 mt-10 items-center">
+          <View className="items-center mt-10 mb-6">
             <ButtonComponent
               title="Continue"
               onPress={handleContinue}

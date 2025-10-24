@@ -72,7 +72,7 @@ export async function forceRefreshIdToken(): Promise<void> {
   try {
     const auth = getFirebaseAuth();
     const user = auth.currentUser;
-    if (!user) return; // nothing to refresh
+    if (!user) return; 
 
     // Force refresh to ensure token claims (email_verified etc) are current
     await user.getIdToken(true);
