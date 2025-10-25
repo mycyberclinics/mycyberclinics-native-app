@@ -108,14 +108,14 @@ export const useAuthStore = create<AuthState>()(
           set({ loading: true, error: null });
           const auth = getFirebaseAuth();
 
-          // 1) Create Firebase client user
+          //  Create Firebase client user
           const cred = await createUserWithEmailAndPassword(auth, email, password);
           const { uid, email: em } = cred.user;
           const token = await cred.user.getIdToken();
           await SecureStore.setItemAsync(TOKEN_KEY, token);
           console.log('[AUTH] Sign-up successful:', uid);
 
-          // 2) Call backend to create profile and send SendGrid template
+          //  Call backend to create profile and send SendGrid template
           try {
             const payload = { email: em, password, firebaseUid: uid };
             console.log('[AUTH] calling backend /api/signup payload:', {
@@ -154,7 +154,7 @@ export const useAuthStore = create<AuthState>()(
                   firebaseUid: uid,
                 });
                 if (resendResp && resendResp.status >= 200 && resendResp.status < 300) {
-                  console.log('[AUTH] Backend resend success', resendResp.data);
+                  console.log('[AUTH] Backend resend success', resendResp.data); 
                   set({ verificationSentByBackend: true });
                 } else {
                   console.warn(

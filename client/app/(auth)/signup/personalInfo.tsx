@@ -19,12 +19,11 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import ButtonComponent from '@/components/ButtonComponent';
 import { BackendUserSchema } from '@/lib/schemas/user';
 import { useAuthStore } from '@/store/auth';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import api from '@/lib/api/client';
 import Toast from 'react-native-toast-message';
 import { updateProfile } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
-
 import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 
 import parseError from '@/utils/parseError';
@@ -61,6 +60,9 @@ export default function PersonalInfoScreen() {
   const colorScheme = useColorScheme();
   const auth = getFirebaseAuth();
   const currentUser = auth.currentUser;
+
+  // success overlay flag
+  const [success, setSuccess] = useState(false);
 
   // Google Places autocomplete
   useEffect(() => {
@@ -200,10 +202,6 @@ export default function PersonalInfoScreen() {
         bio: '',
       };
 
-      // <<<<<<< HEAD
-      //       const response = await api.post('/api/profile/complete', payload);
-      //       console.log('[Profile Complete Response]', response.data);
-
       // Attach idToken explicitly
       let token: string | undefined = undefined;
       try {
@@ -239,11 +237,17 @@ export default function PersonalInfoScreen() {
       const normalizedRole = data.role === 'doctor' ? 'physician' : data.role;
 
       if (normalizedRole === 'physician') {
+        // Doctors continue to credential step immediately (no overlay change)
         router.push('/(auth)/signup/doctorCredential');
       } else {
-        useAuthStore.setState({ onboarding: false });
-        console.log('[PersonalInfo] ✅ Onboarding complete, redirecting to home');
-        router.replace('/(main)/home');
+        // ✅ NEW: show success overlay and delay navigation by ~1s for patients
+        setSuccess(true);
+        // Ensure onboarding state is already set (done above)
+        setTimeout(() => {
+          useAuthStore.setState({ onboarding: false });
+          console.log('[PersonalInfo] ✅ Onboarding complete, redirecting to home');
+          router.replace('/(main)/home');
+        }, 1200);
       }
     } catch (error) {
       const e = parseError(error);
@@ -305,7 +309,7 @@ export default function PersonalInfoScreen() {
               </Text>
 
               <Text className="mt-2 text-[14px] text-text-secondaryLight dark:text-text-secondaryDark">
-                We’ll personalize your health journey with a few quick details.
+                We'll personalize your health journey with a few quick details.
               </Text>
             </View>
 
@@ -324,15 +328,6 @@ export default function PersonalInfoScreen() {
                     placeholder="Name"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="default"
-                    className="flex-1 px-2 py-3 mb-2 text-gray-900 dark:text-white"
-                  />
-
-                  <TextInput
-                    value={value}
-                    onChangeText={onChange}
-                    placeholder="Name"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="default"
                     className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
                   />
                 </View>
@@ -342,7 +337,7 @@ export default function PersonalInfoScreen() {
               <Text className="mt-1 text-sm text-red-400">{errors.displayName.message}</Text>
             )}
 
-            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
+            <Text className="mb-2 mt-4 text-[14px] font-[500] text-gray-900 dark:text-white">
               Phone number
             </Text>
             <Controller
@@ -560,6 +555,27 @@ export default function PersonalInfoScreen() {
           </View>
         </ScrollView>
       </Animated.View>
+
+      {/* ✅ NEW: Success overlay for patients */}
+      {success && (
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(300)}
+          className="absolute inset-0 items-center justify-center bg-black/60"
+        >
+          <Animated.View
+            entering={ZoomIn.duration(500)}
+            exiting={ZoomOut.duration(300)}
+            className="items-center"
+          >
+            <View className="mb-3 h-[80px] w-[80px] items-center justify-center rounded-full bg-[#1ED28A]">
+              <Feather name="check" size={38} color="#fff" />
+            </View>
+            <Text className="text-[18px] font-[600] text-white">Profile Complete!</Text>
+          </Animated.View>
+        </Animated.View>
+      )}
+
       <Toast />
     </>
   );
