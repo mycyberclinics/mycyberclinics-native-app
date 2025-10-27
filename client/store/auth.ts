@@ -1,8 +1,7 @@
-import { createStore } from 'zustand/vanilla';
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { create } from 'zustand';
+import type { UseBoundStore, StoreApi } from 'zustand';
+
 import { getFirebaseAuth } from '@/lib/firebase';
 import {
   signInWithEmailAndPassword,
@@ -10,7 +9,6 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged,
   onIdTokenChanged,
-  User,
 } from 'firebase/auth';
 import api from '@/lib/api/client';
 import { BackendUserSchema, BackendUser } from '@/lib/schemas/user';
@@ -32,7 +30,6 @@ type AuthState = {
   lastStep: string | null;
   emailVerified: boolean;
   profileCompleted: boolean;
-  rehydrated: boolean;
   verificationSentByBackend: boolean;
 
   setUser: (user: AppUser | null) => void;
@@ -59,7 +56,8 @@ type AuthState = {
 
 const TOKEN_KEY = 'mc_firebase_id_token';
 
-const store = createStore<AuthState>((set, get) => ({
+// All your store state & actions in a function
+const makeStore = (set: any, get: any): AuthState => ({
   token: null,
   user: null,
   profile: null,
@@ -72,7 +70,6 @@ const store = createStore<AuthState>((set, get) => ({
   lastStep: null,
   emailVerified: false,
   profileCompleted: false,
-  rehydrated: false,
   verificationSentByBackend: false,
 
   setUser: (user) => set({ user }),
@@ -104,19 +101,24 @@ const store = createStore<AuthState>((set, get) => ({
       const { uid, email: em } = cred.user;
       const token = await cred.user.getIdToken();
       await SecureStore.setItemAsync(TOKEN_KEY, token);
-      set({ user: cred.user });
 
       try {
         const payload = { email: em, password, firebaseUid: uid };
         const resp = await api.post('/api/signup', payload);
-        const sentFlag = resp.data?.sent ?? resp.data?.success ?? true;
-        set({ verificationSentByBackend: Boolean(sentFlag) });
+        if (resp && resp.status >= 200 && resp.status < 300) {
+          const sentFlag = resp.data?.sent ?? resp.data?.success ?? true;
+          set({ verificationSentByBackend: Boolean(sentFlag) });
+        } else {
+          set({ verificationSentByBackend: false });
+        }
       } catch (syncErr) {
         const e = parseError(syncErr);
         const backendMsg = String(e.response?.data?.error ?? e.message ?? '').toLowerCase();
-        const isUnverifiedExists = /exists.*unverified|already exists.*unverified/i.test(
-          backendMsg,
-        );
+        const isUnverifiedExists =
+          /exists.*unverified|exists but is unverified|already exists.*unverified|already exists but is unverified/i.test(
+            backendMsg,
+          ) ||
+          (/already exists/i.test(backendMsg) && /unverified/i.test(backendMsg));
 
         if (isUnverifiedExists) {
           try {
@@ -124,16 +126,24 @@ const store = createStore<AuthState>((set, get) => ({
               email: em,
               firebaseUid: uid,
             });
-            set({ verificationSentByBackend: resendResp.status >= 200 && resendResp.status < 300 });
+            if (resendResp && resendResp.status >= 200 && resendResp.status < 300) {
+              set({ verificationSentByBackend: true });
+            } else {
+              set({
+                error:
+                  'Account exists but is unverified. Backend resend returned non-OK. You can request "Re-send" on the next screen.',
+                verificationSentByBackend: false,
+              });
+            }
           } catch (resendErr) {
-            const r = parseError(resendErr);
             set({
-              error: 'Account exists but is unverified. Backend resend failed.',
+              error:
+                'Account exists but is unverified. Backend resend failed. You can request "Re-send" on the next screen.',
               verificationSentByBackend: false,
             });
           }
         } else {
-          set({ error: e.message, verificationSentByBackend: false });
+          set({ error: e.message || 'Backend sync failed', verificationSentByBackend: false });
         }
       }
 
@@ -155,8 +165,6 @@ const store = createStore<AuthState>((set, get) => ({
       set({ loading: false });
     }
   },
-
-  // Continue from Batch 1...
 
   signIn: async (email, password) => {
     set({ loading: true, error: null });
@@ -190,7 +198,6 @@ const store = createStore<AuthState>((set, get) => ({
       const validated = BackendUserSchema.parse(response.data);
       const normalizedRole = validated.role === 'physician' ? 'doctor' : validated.role;
       set({ profile: { ...validated, role: normalizedRole } });
-
       if (user.emailVerified && validated.email) {
         set({ onboarding: false, lastStep: null });
       }
@@ -298,28 +305,24 @@ const store = createStore<AuthState>((set, get) => ({
       });
     });
   },
-}));
+});
 
-// ✅ TypeScript-safe conditional storage setup
+// Platform specific export (with explicit type for TS!)
+// We use _useAuthStore internally, and export useAuthStore with the correct type.
+let _useAuthStore: UseBoundStore<StoreApi<AuthState>>;
 
-const isWeb = Platform.OS === 'web';
+if (Platform.OS === 'web') {
+  _useAuthStore = create<AuthState>(makeStore);
+} else {
+  const { persist, createJSONStorage } = require('zustand/middleware');
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  _useAuthStore = create<AuthState>(
+    persist(makeStore, {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }),
+  );
+}
 
-const getStorage = () =>
-  isWeb
-    ? {
-        getItem: async (key: string): Promise<string | null> => localStorage.getItem(key),
-        setItem: async (key: string, value: string): Promise<void> => {
-          localStorage.setItem(key, value);
-        },
-        removeItem: async (key: string): Promise<void> => {
-          localStorage.removeItem(key);
-        },
-      }
-    : AsyncStorage;
-
-export const useAuthStore = create<AuthState>()(
-  persist(() => store.getState(), {
-    name: 'auth-storage',
-    storage: createJSONStorage(getStorage),
-  }),
-);
+// This ensures correct typing everywhere!
+export const useAuthStore: typeof _useAuthStore = _useAuthStore;
