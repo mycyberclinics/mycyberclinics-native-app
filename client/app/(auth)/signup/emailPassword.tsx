@@ -15,7 +15,7 @@ type Step1FormValues = z.infer<typeof Step1Schema>;
 
 export default function Step1Screen() {
   const router = useRouter();
-  useTrackOnboardingStep(); 
+  useTrackOnboardingStep(); // tracks current onboarding step
   const colorScheme = useColorScheme();
 
   const {
@@ -28,22 +28,16 @@ export default function Step1Screen() {
     defaultValues: { email: '', password: '' },
   });
 
-  const { signUp, loading, setTempEmail } = useAuthStore();
+  // Only store values, don't call signUp here!
+  const { setTempEmail, setTempPassword, loading } = useAuthStore();
   const [showPassword, setShowPassword] = React.useState(false);
   const [focusedField, setFocusedField] = React.useState<string | null>(null);
 
   const onSubmit = async (data: Step1FormValues) => {
-    try {
-      const success = await signUp(data.email, data.password || '');
-      if (success) {
-        setTempEmail(data.email);
-        router.push('/(auth)/signup/verifyPassword');
-      }
-    } catch (err) {
-      console.error('[Step1] Sign-up failed:', err);
-    } finally {
-      reset(undefined, { keepValues: true });
-    }
+    setTempEmail(data.email);
+    setTempPassword(data.password);
+    router.push('/(auth)/signup/verifyPassword');
+    reset(undefined, { keepValues: true });
   };
 
   return (

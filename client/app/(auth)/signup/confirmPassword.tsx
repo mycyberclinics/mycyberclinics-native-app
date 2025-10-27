@@ -42,7 +42,8 @@ export default function ConfirmPasswordScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
 
-  const { tempEmail, tempPassword, setTempPassword, loading, verificationSentByBackend } =
+  // Get both from store
+  const { tempEmail, tempPassword, setTempPassword, loading, verificationSentByBackend, signUp } =
     useAuthStore();
 
   const {
@@ -65,20 +66,33 @@ export default function ConfirmPasswordScreen() {
     if (tempPassword) setValue('password', tempPassword);
   }, [tempEmail, tempPassword, setValue]);
 
-  // Submit: confirm password + decide whether to send verification
+  // Submit: confirm password, then trigger signUp
   const onSubmit = async (data: FormValues) => {
     setTempPassword(data.confirmPassword);
 
+    const email = tempEmail;
+    const password = data.confirmPassword;
+
     try {
+      // Only trigger signUp here!
+      const signupSuccess = await signUp(email!, password!);
+
+      if (!signupSuccess) {
+        Alert.alert('Sign up failed', 'Unable to create account. Please check your info and try again.');
+        return;
+      }
+
+      // Now handle email verification logic
       const auth = getFirebaseAuth();
       const current = auth.currentUser;
 
       if (current) {
         if (verificationSentByBackend) {
-          // Backend already sent a custom template. Don't call Firebase default.
+          // Backend already sent a custom template. Do not show any error or popup.
           console.log(
-            '[ConfirmPassword] Backend sent verification email — skipping client sendEmailVerification',
+            '[ConfirmPassword] Backend sent verification email — skipping client sendEmailVerification'
           );
+          // Optionally show a toast or nothing at all.
         } else {
           // Fallback: call Firebase's sendEmailVerification (default template)
           try {
@@ -86,6 +100,7 @@ export default function ConfirmPasswordScreen() {
             console.log('[ConfirmPassword] Verification email requested (Firebase default)');
             Alert.alert('Verification sent', 'A Firebase verification email has been sent.');
           } catch (err: any) {
+            // ONLY show error if it's not a backend-driven flow
             console.error('[ConfirmPassword] sendEmailVerification error', err);
             Alert.alert('Error', 'Could not send verification email. Please try again later.');
           }
@@ -95,6 +110,8 @@ export default function ConfirmPasswordScreen() {
       }
     } catch (err) {
       console.error('[ConfirmPassword] unexpected error', err);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+      return;
     }
 
     router.push('/(auth)/signup/verifyEmail');

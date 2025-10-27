@@ -47,6 +47,7 @@ export default function ConfirmEmailScreen() {
   const [checkingVerification, setCheckingVerification] = useState(false);
   const [verified, setVerified] = useState<boolean>(!!user?.emailVerified);
   const [linkDetectedMessage, setLinkDetectedMessage] = useState<string | null>(null);
+  const [tooManyRequests, setTooManyRequests] = useState<boolean>(false);
 
   const colorScheme = useColorScheme();
 
@@ -72,11 +73,6 @@ export default function ConfirmEmailScreen() {
   }));
 
   // Always reload when screen mounts
-  useEffect(() => {
-    reloadAndCheck();
-  }, []);
-
-  // reload firebase user and check verification
   const reloadAndCheck = useCallback(async () => {
     try {
       setCheckingVerification(true);
@@ -85,6 +81,7 @@ export default function ConfirmEmailScreen() {
       const isVerified = !!refreshed?.emailVerified;
       setVerified(isVerified);
       setUser(refreshed ? { id: refreshed.uid, email: refreshed.email || "", emailVerified: refreshed.emailVerified } : null); // update Zustand
+      console.log('[ConfirmEmail] FULL USER OBJECT:', refreshed);
       console.log('[ConfirmEmail] emailVerified after reload:', refreshed?.emailVerified);
       if (isVerified) {
         setLinkDetectedMessage('Email confirmed — thank you!');
@@ -96,6 +93,18 @@ export default function ConfirmEmailScreen() {
       setLoading(false);
     }
   }, [setUser, setLoading]);
+
+  useEffect(() => {
+    reloadAndCheck();
+  }, []);
+
+  // Listen for app coming to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') reloadAndCheck();
+    });
+    return () => subscription?.remove();
+  }, [reloadAndCheck]);
 
   // Watch for changes to auth.currentUser (in case some other part updates it)
   useEffect(() => {
@@ -119,9 +128,10 @@ export default function ConfirmEmailScreen() {
           console.log('[ConfirmEmail] Requesting backend resend: /api/resend-verification', { email: current.email });
           const r = await api.post('/api/resend-verification', { email: current.email, firebaseUid: current.uid });
           if (r && r.status >= 200 && r.status < 300) {
-            setResendCooldownSec(30);
+            setResendCooldownSec(60);
             Alert.alert('Verification Sent', 'A verification link was (re)sent via backend.');
             setVerificationSentByBackend(true);
+            setTooManyRequests(false);
             return;
           } else {
             console.warn('[ConfirmEmail] backend resend returned non-OK', r.status, r.data);
@@ -136,11 +146,20 @@ export default function ConfirmEmailScreen() {
       // fallback to Firebase if backend not used or failed
       try {
         await sendEmailVerification(current);
-        setResendCooldownSec(30);
+        setResendCooldownSec(60);
+        setTooManyRequests(false);
         Alert.alert('Verification Sent', 'A verification link was sent to your email (Firebase).');
       } catch (err: any) {
         console.error('[ConfirmEmail] firebase resend error', err);
-        Alert.alert('Error', 'Failed to resend verification via Firebase.');
+        if (err?.code === 'auth/too-many-requests' || err?.message?.includes('too-many-requests')) {
+          setTooManyRequests(true);
+          Alert.alert(
+            'Error',
+            "You've requested too many verification emails. Please wait before trying again."
+          );
+        } else {
+          Alert.alert('Error', 'Failed to resend verification via Firebase.');
+        }
       }
     } finally {
       setResending(false);
@@ -174,14 +193,9 @@ export default function ConfirmEmailScreen() {
       ? Linking.addEventListener('url', urlListener)
       : Linking.addEventListener('url', urlListener);
 
-    const subscription = AppState.addEventListener?.('change', (state: AppStateStatus) => {
-      if (state === 'active') reloadAndCheck();
-    });
-
     return () => {
       try {
         if (sub && typeof sub.remove === 'function') sub.remove();
-        if (subscription && typeof subscription.remove === 'function') subscription.remove();
       } catch (e) {
         console.error("Couldn't remove listener: ", e);
       }
@@ -255,6 +269,12 @@ export default function ConfirmEmailScreen() {
                   You may continue now.
                 </Text>
               )}
+
+              {tooManyRequests && (
+                <Text className="mt-2 text-center text-base text-red-600">
+                  You've requested too many verification emails. Please wait before trying again.
+                </Text>
+              )}
             </View>
 
             <View className="mt-4 flex-row items-center justify-center">
@@ -264,19 +284,30 @@ export default function ConfirmEmailScreen() {
 
               <Pressable
                 onPress={handleResend}
-                disabled={resending || resendCooldownSec > 0}
+                disabled={resending || resendCooldownSec > 0 || tooManyRequests}
                 className="ml-2"
               >
                 <Text
                   className={`text-[14px] font-[600] ${
-                    resending || resendCooldownSec > 0 ? 'text-gray-400' : 'text-emerald-500'
+                    resending || resendCooldownSec > 0 || tooManyRequests ? 'text-gray-400' : 'text-emerald-500'
                   }`}
                 >
                   {resending
                     ? 'Sending...'
                     : resendCooldownSec > 0
                       ? `Retry in ${resendCooldownSec}s`
-                      : 'Re-send'}
+                      : tooManyRequests
+                        ? 'Wait before retry'
+                        : 'Re-send'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={reloadAndCheck}
+                disabled={checkingVerification}
+                className="ml-4"
+              >
+                <Text className="text-[14px] font-[600] text-emerald-500">
+                  Check again
                 </Text>
               </Pressable>
             </View>
