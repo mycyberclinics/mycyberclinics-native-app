@@ -117,11 +117,15 @@ const makeStore = (set: any, get: any): AuthState => ({
         const isUnverifiedExists =
           /exists.*unverified|exists but is unverified|already exists.*unverified|already exists but is unverified/i.test(
             backendMsg,
-          ) || /already exists/i.test(backendMsg) && /unverified/i.test(backendMsg);
+          ) ||
+          (/already exists/i.test(backendMsg) && /unverified/i.test(backendMsg));
 
         if (isUnverifiedExists) {
           try {
-            const resendResp = await api.post('/api/resend-verification', { email: em, firebaseUid: uid });
+            const resendResp = await api.post('/api/resend-verification', {
+              email: em,
+              firebaseUid: uid,
+            });
             if (resendResp && resendResp.status >= 200 && resendResp.status < 300) {
               set({ verificationSentByBackend: true });
             } else {
@@ -316,7 +320,7 @@ if (Platform.OS === 'web') {
     persist(makeStore, {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
-    })
+    }),
   );
 }
 
