@@ -8,6 +8,8 @@ import { useAuthStore } from '@/store/auth';
 import api from '@/lib/api/client';
 import ButtonComponent from '@/components/ButtonComponent';
 import { getFirebaseAuth } from '@/lib/firebase';
+import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
+import Toast from 'react-native-toast-message';
 
 type UploadedFile = {
   name: string;
@@ -17,8 +19,18 @@ type UploadedFile = {
   serverUrl?: string;
 };
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; 
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.ms-excel',
+  'image/jpeg',
+  'image/png',
+];
+
 export default function DoctorCredentialScreen() {
   const router = useRouter();
+  useTrackOnboardingStep();
   const { completeSignUp, syncProfile, setOnboardingComplete } = useAuthStore();
 
   const colorScheme = useColorScheme();
@@ -29,35 +41,79 @@ export default function DoctorCredentialScreen() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const pickFile = async (setFile: (f: UploadedFile | null) => void) => {
+  // Inline errors for user feedback
+  const [bioError, setBioError] = useState<string | null>(null);
+  const [mdcnError, setMdcnError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<string | null>(null);
+
+  const showToast = (type: 'success' | 'error' | 'info', text1: string, text2?: string) => {
+    Toast.show({
+      type,
+      text1,
+      text2,
+      visibilityTime: 2500,
+    });
+  };
+
+  const validateBio = (value: string) => {
+    const trimmed = value.trim();
+    // Keep validation light to avoid breaking flows; adjust min length as needed
+    if (trimmed.length < 10) {
+      return 'Please provide a short professional bio (at least 10 characters).';
+    }
+    return null;
+  };
+
+  const validateFile = (file: UploadedFile | null) => {
+    if (!file) return 'Your current MDCN Annual Practice License is required.';
+    if (file.size && file.size > MAX_FILE_SIZE) return 'File must be 5MB or less.';
+    if (file.type && !ALLOWED_MIME_TYPES.includes(file.type))
+      return 'Unsupported file type. Please upload PDF, PPT, XLS, JPG, or PNG.';
+    return null;
+  };
+
+  const pickFile = async (setFile: (f: UploadedFile | null) => void, required?: boolean) => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          'application/pdf',
-          'application/vnd.ms-powerpoint',
-          'application/vnd.ms-excel',
-          'image/jpeg',
-          'image/png',
-        ],
+        type: ALLOWED_MIME_TYPES,
         copyToCacheDirectory: true,
       });
 
-      if (result.canceled || !result.assets?.length) return;
+      if (result.canceled || !result.assets?.length) {
+        if (required) {
+          setFile(null);
+          setMdcnError('Your current MDCN Annual Practice License is required.');
+        }
+        return;
+      }
 
       const file = result.assets[0];
-      setFile({
+      const candidate: UploadedFile = {
         name: file.name,
         size: file.size ?? 0,
         uri: file.uri,
         type: file.mimeType,
-      });
+      };
+
+      const fileErr = validateFile(candidate);
+      if (fileErr) {
+        showToast('error', 'Invalid file', fileErr);
+        if (required) setMdcnError(fileErr);
+        return;
+      }
+
+      setFile(candidate);
+      if (required) setMdcnError(null);
     } catch (err) {
       console.error('[DoctorCredential] File pick error:', err);
+      showToast('error', 'File selection failed', 'Please try again.');
     }
   };
 
   const uploadDocs = async () => {
     const formData = new FormData();
+
+    formData.append('bio', bio);
 
     if (mdcnFile) {
       formData.append('mcdnLicense', {
@@ -94,26 +150,57 @@ export default function DoctorCredentialScreen() {
   };
 
   const handleContinue = async () => {
+    setGeneralError(null);
+    // Validate inputs before any network call
+    const bioErr = validateBio(bio);
+    const fileErr = validateFile(mdcnFile);
+
+    setBioError(bioErr);
+    setMdcnError(fileErr);
+
+    if (bioErr || fileErr) {
+      showToast('error', 'Please fix the issues', 'Check your bio and required document.');
+      return;
+    }
+
     try {
       setLoading(true);
+
+      // Upload documents
       await uploadDocs();
 
-      setSuccess(true);
+      // Sync bio (keep as a separate call/update for compatibility with existing flow)
+      try {
+        await syncProfile({ bio });
+      } catch (syncErr) {
+        console.warn('[DoctorCredential] syncProfile warning:', syncErr);
+        // Do not block onboarding completion if docs were uploaded successfully
+      }
 
       // mark onboarding complete (sets onboarding=false, etc.)
       setOnboardingComplete();
 
-      // optional: ensure profile sync after docs uploaded
-      await syncProfile({ bio });
-
       // mark app state clean
       completeSignUp();
+
+      setSuccess(true);
+      showToast('success', 'Verification Complete!', 'Redirecting to your dashboard...');
 
       setTimeout(() => {
         router.replace('/(main)/home');
       }, 1200);
     } catch (err: any) {
       console.error('[DoctorCredential] Submit error:', err);
+
+      // Try to parse server error message if present
+      const serverMessage =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Something went wrong while uploading your credentials.';
+
+      setGeneralError(serverMessage);
+      showToast('error', 'Upload failed', serverMessage);
     } finally {
       setLoading(false);
     }
@@ -146,7 +233,7 @@ export default function DoctorCredentialScreen() {
             </Pressable>
           </View>
 
-          <View className="mb-4 mt-6">
+          <View className="mt-6 mb-4">
             <Text className="text-[18px] font-[700] text-[#0B1220] dark:text-white">
               Hi Doctor, Verify Your Medical Credentials
             </Text>
@@ -159,25 +246,30 @@ export default function DoctorCredentialScreen() {
           <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Bio</Text>
           <TextInput
             value={bio}
-            onChangeText={setBio}
+            onChangeText={(t) => {
+              setBio(t);
+              if (bioError) setBioError(null);
+            }}
             placeholder="Enter your bio..."
             placeholderTextColor="#9CA3AF"
             multiline
-            className="min-h-[100px] rounded-[8px] border border-gray-300 bg-gray-50 px-3 py-3 text-[14px] text-gray-900 dark:border-[#2F343A] dark:bg-[#15191E] dark:text-white"
+            className="min-h[100px] min-h-[100px] rounded-[8px] border border-gray-300 bg-gray-50 px-3 py-3 text-[14px] text-gray-900 dark:border-[#2F343A] dark:bg-[#15191E] dark:text-white"
           />
+          {bioError ? <Text className="mt-1 text-[12px] text-red-500">{bioError}</Text> : null}
 
           <View className="mt-6">
             <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
               Current MDCN Annual Practice License – Required
             </Text>
             <Pressable
-              onPress={() => pickFile(setMdcnFile)}
+              onPress={() => pickFile(setMdcnFile, true)}
               className="h-[120px] items-center justify-center rounded-[8px] border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]"
             >
               <Feather name="upload-cloud" size={24} color="#9CA3AF" />
               <Text className="mt-2 text-[13px] font-[500] text-[#1ED28A]">Click to upload</Text>
-              <Text className="text-[12px] text-gray-400">PDF, PPT, XLS or JPG (max 5MB)</Text>
+              <Text className="text-[12px] text-gray-400">PDF, PPT, XLS or JPG/PNG (max 5MB)</Text>
             </Pressable>
+            {mdcnError ? <Text className="mt-1 text-[12px] text-red-500">{mdcnError}</Text> : null}
 
             {mdcnFile && (
               <Animated.View
@@ -196,7 +288,12 @@ export default function DoctorCredentialScreen() {
                     </Text>
                   </View>
                 </View>
-                <Pressable onPress={() => setMdcnFile(null)}>
+                <Pressable
+                  onPress={() => {
+                    setMdcnFile(null);
+                    setMdcnError('Your current MDCN Annual Practice License is required.');
+                  }}
+                >
                   <Feather name="trash-2" size={18} color="red" />
                 </Pressable>
               </Animated.View>
@@ -213,7 +310,7 @@ export default function DoctorCredentialScreen() {
             >
               <Feather name="upload-cloud" size={24} color="#9CA3AF" />
               <Text className="mt-2 text-[13px] font-[500] text-[#1ED28A]">Click to upload</Text>
-              <Text className="text-[12px] text-gray-400">PDF, PPT, XLS or JPG (max 5MB)</Text>
+              <Text className="text-[12px] text-gray-400">PDF, PPT, XLS or JPG/PNG (max 5MB)</Text>
             </Pressable>
 
             {additionalFile && (
@@ -240,7 +337,13 @@ export default function DoctorCredentialScreen() {
             )}
           </View>
 
-          <View className="mb-6 mt-10 items-center">
+          {generalError ? (
+            <View className="mt-6 rounded-[8px] border border-red-300 bg-red-50 px-3 py-2 dark:border-red-400/40 dark:bg-red-900/20">
+              <Text className="text-[12px] text-red-600 dark:text-red-300">{generalError}</Text>
+            </View>
+          ) : null}
+
+          <View className="items-center mt-10 mb-6">
             <ButtonComponent
               title="Continue"
               onPress={handleContinue}
@@ -270,6 +373,9 @@ export default function DoctorCredentialScreen() {
           </Animated.View>
         </Animated.View>
       )}
+
+      {/* Toast portal */}
+      <Toast />
     </Animated.View>
   );
 }

@@ -94,7 +94,7 @@ export default function OnboardingScreen({
 
         <View className="mt-14 flex w-full max-w-[328px] flex-col items-center justify-center gap-[34px] py-4">
           <View className="flex flex-col items-center justify-center">
-            <Text className="text-center text-[28px] font-bold text-text-primaryLight md:text-[32px] dark:text-text-primaryDark">
+            <Text className="text-center text-[28px] font-bold text-text-primaryLight dark:text-text-primaryDark md:text-[32px]">
               Get Healthcare,{'\n'}Wherever You Are
             </Text>
             <Text

@@ -19,11 +19,13 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import ButtonComponent from '@/components/ButtonComponent';
 import { BackendUserSchema } from '@/lib/schemas/user';
 import { useAuthStore } from '@/store/auth';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import api from '@/lib/api/client';
 import Toast from 'react-native-toast-message';
 import { updateProfile } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
+import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
+
 import parseError from '@/utils/parseError';
 
 /**
@@ -42,6 +44,7 @@ const ProfileCompletionSchema = BackendUserSchema.pick({
 type FormValues = z.infer<typeof ProfileCompletionSchema>;
 
 export default function PersonalInfoScreen() {
+  useTrackOnboardingStep();
   const router = useRouter();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -57,6 +60,9 @@ export default function PersonalInfoScreen() {
   const colorScheme = useColorScheme();
   const auth = getFirebaseAuth();
   const currentUser = auth.currentUser;
+
+  // success overlay flag
+  const [success, setSuccess] = useState(false);
 
   // Google Places autocomplete
   useEffect(() => {
@@ -130,7 +136,12 @@ export default function PersonalInfoScreen() {
     for (const ep of endpoints) {
       for (const method of methods) {
         try {
-          console.log(`[API] Attempting ${method.toUpperCase()} ${ep} with payload:`, payload, 'headers:', headers);
+          console.log(
+            `[API] Attempting ${method.toUpperCase()} ${ep} with payload:`,
+            payload,
+            'headers:',
+            headers,
+          );
           let resp;
           if (method === 'post') {
             resp = await api.post(ep, payload, { headers });
@@ -151,7 +162,12 @@ export default function PersonalInfoScreen() {
             parsed.response?.statusCode ??
             parsed.response?.status_code ??
             undefined;
-          console.warn(`[API] ${method.toUpperCase()} ${ep} failed:`, parsed.response ?? parsed.message, 'status:', status);
+          console.warn(
+            `[API] ${method.toUpperCase()} ${ep} failed:`,
+            parsed.response ?? parsed.message,
+            'status:',
+            status,
+          );
           if (status && status !== 404) {
             throw err;
           }
@@ -198,12 +214,7 @@ export default function PersonalInfoScreen() {
         'Content-Type': 'application/json',
       };
 
-      const endpoints = [
-        '/api/profile/complete',
-        '/profile/complete',
-        '/api/profile',
-        '/profile',
-      ];
+      const endpoints = ['/api/profile/complete', '/profile/complete', '/api/profile', '/profile'];
 
       const resp = await tryEndpointsWithMethods(endpoints, payload, headers);
 
@@ -226,15 +237,24 @@ export default function PersonalInfoScreen() {
       const normalizedRole = data.role === 'doctor' ? 'physician' : data.role;
 
       if (normalizedRole === 'physician') {
+        // Doctors continue to credential step immediately (no overlay change)
         router.push('/(auth)/signup/doctorCredential');
       } else {
-        useAuthStore.setState({ onboarding: false });
-        console.log('[PersonalInfo] ✅ Onboarding complete, redirecting to home');
-        router.replace('/(main)/home');
+        // ✅ NEW: show success overlay and delay navigation by ~1s for patients
+        setSuccess(true);
+        // Ensure onboarding state is already set (done above)
+        setTimeout(() => {
+          useAuthStore.setState({ onboarding: false });
+          console.log('[PersonalInfo] ✅ Onboarding complete, redirecting to home');
+          router.replace('/(main)/home');
+        }, 1200);
       }
     } catch (error) {
       const e = parseError(error);
-      console.error('[Personal Info] Error syncing:', e.response ?? e.message ?? e.original ?? error);
+      console.error(
+        '[Personal Info] Error syncing:',
+        e.response ?? e.message ?? e.original ?? error,
+      );
       const message =
         e.response?.data?.error ||
         e.response?.data?.message ||
@@ -252,7 +272,11 @@ export default function PersonalInfoScreen() {
 
   return (
     <>
-      <Animated.View entering={FadeIn.duration(400)} exiting={FadeOut.duration(200)} style={{ flex: 1 }}>
+      <Animated.View
+        entering={FadeIn.duration(400)}
+        exiting={FadeOut.duration(200)}
+        style={{ flex: 1 }}
+      >
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
@@ -272,137 +296,286 @@ export default function PersonalInfoScreen() {
               }}
               className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
             >
-              <Feather name="arrow-left" size={22} color={colorScheme === 'dark' ? '#F5F5F5' : '#111827'} />
+              <Feather
+                name="arrow-left"
+                size={22}
+                color={colorScheme === 'dark' ? '#F5F5F5' : '#111827'}
+              />
             </Pressable>
 
-            <View className="mb-6 mt-4">
-              <Text className="text-[22px] font-[700] text-[#0B1220] dark:text-white">Almost Done 🎉</Text>
+            <View className="mt-4 mb-6">
+              <Text className="text-[22px] font-[700] text-[#0B1220] dark:text-white">
+                Almost Done 🎉
+              </Text>
+
               <Text className="mt-2 text-[14px] text-text-secondaryLight dark:text-text-secondaryDark">
-                We’ll personalize your health journey with a few quick details.
+                We'll personalize your health journey with a few quick details.
               </Text>
             </View>
 
-            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Name</Text>
+            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
+              Full Name
+            </Text>
             <Controller
               control={control}
               name="displayName"
               render={({ field: { value, onChange } }) => (
                 <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
                   <Feather name="user" size={18} color="#9CA3AF" />
-                  <TextInput value={value} onChangeText={onChange} placeholder="Name" placeholderTextColor="#9CA3AF" keyboardType="default" className="flex-1 px-2 py-3 text-gray-900 dark:text-white" />
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="Name"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="default"
+                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
+                  />
                 </View>
               )}
             />
-            {errors.displayName && <Text className="mt-1 text-sm text-red-400">{errors.displayName.message}</Text>}
+            {errors.displayName && (
+              <Text className="mt-1 text-sm text-red-400">{errors.displayName.message}</Text>
+            )}
 
-            <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Phone number</Text>
+            <Text className="mb-2 mt-4 text-[14px] font-[500] text-gray-900 dark:text-white">
+              Phone number
+            </Text>
             <Controller
               control={control}
               name="phone"
               render={({ field: { value, onChange } }) => (
                 <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
                   <Feather name="phone" size={18} color="#9CA3AF" />
-                  <TextInput value={value} onChangeText={onChange} placeholder="+234 70 896 1234" placeholderTextColor="#9CA3AF" keyboardType="phone-pad" className="flex-1 px-2 py-3 text-gray-900 dark:text-white" />
+                  <TextInput
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="+234 70 896 1234"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="phone-pad"
+                    className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
+                  />
                 </View>
               )}
             />
-            {errors.phone && <Text className="mt-1 text-sm text-red-400">{errors.phone.message}</Text>}
+            {errors.phone && (
+              <Text className="mt-1 text-sm text-red-400">{errors.phone.message}</Text>
+            )}
 
             <View className="mt-4">
-              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Date of birth</Text>
-              <Controller control={control} name="dob" render={({ field: { value, onChange } }) => (
-                <>
-                  <Pressable onPress={() => setShowDatePicker(true)}>
-                    <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
-                      <Feather name="calendar" size={18} color="#9CA3AF" />
-                      <Text className="flex-1 px-2 text-gray-900 dark:text-white">{value ? value.toDateString() : 'Select date of birth'}</Text>
-                      <Feather name="chevron-down" size={18} color="#9CA3AF" />
-                    </View>
-                  </Pressable>
-                  {showDatePicker && (
-                    <DateTimePicker value={value || new Date()} mode="date" display="spinner" maximumDate={new Date()} onChange={(_, date) => { setShowDatePicker(false); if (date) onChange(date); }} />
-                  )}
-                </>
-              )} />
-              {errors.dob && <Text className="mt-1 text-sm text-red-400">{errors.dob.message}</Text>}
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
+                Date of birth
+              </Text>
+              <Controller
+                control={control}
+                name="dob"
+                render={({ field: { value, onChange } }) => (
+                  <>
+                    <Pressable onPress={() => setShowDatePicker(true)}>
+                      <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
+                        <Feather name="calendar" size={18} color="#9CA3AF" />
+                        <Text className="flex-1 px-2 text-gray-900 dark:text-white">
+                          {value ? value.toDateString() : 'Select date of birth'}
+                        </Text>
+                        <Feather name="chevron-down" size={18} color="#9CA3AF" />
+                      </View>
+                    </Pressable>
+                    {showDatePicker && (
+                      <DateTimePicker
+                        value={value || new Date()}
+                        mode="date"
+                        display="spinner"
+                        maximumDate={new Date()}
+                        onChange={(_, date) => {
+                          setShowDatePicker(false);
+                          if (date) onChange(date);
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              />
+              {errors.dob && (
+                <Text className="mt-1 text-sm text-red-400">{errors.dob.message}</Text>
+              )}
             </View>
 
             <View className="mt-4">
-              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Gender</Text>
-              <Controller control={control} name="gender" render={({ field: { value, onChange } }) => (
-                <>
-                  <Pressable onPress={() => setGenderOpen((s) => !s)}>
-                    <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
-                      <Feather name="user" size={18} color="#9CA3AF" />
-                      <Text className="flex-1 px-2 text-gray-900 dark:text-white">{value || 'Select Gender'}</Text>
-                      <Feather name={genderOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#9CA3AF" />
-                    </View>
-                  </Pressable>
-                  {genderOpen && (
-                    <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]">
-                      {genderOptions.map((g) => (
-                        <Pressable key={g} onPress={() => { onChange(g); setGenderOpen(false); }} className="flex-row items-center gap-2 px-3 py-2">
-                          <Feather name={value === g ? 'check-square' : 'square'} size={18} color={value === g ? '#1ED28A' : '#9CA3AF'} />
-                          <Text className="text-[14px] text-gray-900 dark:text-white">{g}</Text>
-                        </Pressable>
-                      ))}
-                    </Animated.View>
-                  )}
-                </>
-              )} />
-            </View>
-
-            <View className="mt-4">
-              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Location</Text>
-              <Controller control={control} name="location" render={({ field: { onChange } }) => (
-                <>
-                  <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
-                    <Feather name="map-pin" size={18} color="#9CA3AF" />
-                    <TextInput value={query} onChangeText={(text) => { setQuery(text); onChange(text); }} placeholder="Type to search location" placeholderTextColor="#9CA3AF" className="flex-1 px-2 py-3 text-gray-900 dark:text-white" />
-                  </View>
-
-                  {loadingSuggestions ? (
-                    <View className="py-3"><ActivityIndicator color="#1ED28A" /></View>
-                  ) : (
-                    suggestions.length > 0 && (
-                      <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]">
-                        {suggestions.map((item) => (
-                          <Pressable key={item.place_id} onPress={() => { onChange(item.description); setQuery(item.description); setSuggestions([]); }} className="px-3 py-2">
-                            <Text className="text-[14px] text-gray-900 dark:text-white">{item.description}</Text>
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
+                Gender
+              </Text>
+              <Controller
+                control={control}
+                name="gender"
+                render={({ field: { value, onChange } }) => (
+                  <>
+                    <Pressable onPress={() => setGenderOpen((s) => !s)}>
+                      <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
+                        <Feather name="user" size={18} color="#9CA3AF" />
+                        <Text className="flex-1 px-2 text-gray-900 dark:text-white">
+                          {value || 'Select Gender'}
+                        </Text>
+                        <Feather
+                          name={genderOpen ? 'chevron-up' : 'chevron-down'}
+                          size={18}
+                          color="#9CA3AF"
+                        />
+                      </View>
+                    </Pressable>
+                    {genderOpen && (
+                      <Animated.View
+                        entering={FadeIn.duration(300)}
+                        exiting={FadeOut.duration(200)}
+                        className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]"
+                      >
+                        {genderOptions.map((g) => (
+                          <Pressable
+                            key={g}
+                            onPress={() => {
+                              onChange(g);
+                              setGenderOpen(false);
+                            }}
+                            className="flex-row items-center gap-2 px-3 py-2"
+                          >
+                            <Feather
+                              name={value === g ? 'check-square' : 'square'}
+                              size={18}
+                              color={value === g ? '#1ED28A' : '#9CA3AF'}
+                            />
+                            <Text className="text-[14px] text-gray-900 dark:text-white">{g}</Text>
                           </Pressable>
                         ))}
                       </Animated.View>
-                    )
-                  )}
-                </>
-              )} />
+                    )}
+                  </>
+                )}
+              />
+            </View>
+
+            <View className="mt-4">
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
+                Location
+              </Text>
+              <Controller
+                control={control}
+                name="location"
+                render={({ field: { onChange } }) => (
+                  <>
+                    <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
+                      <Feather name="map-pin" size={18} color="#9CA3AF" />
+                      <TextInput
+                        value={query}
+                        onChangeText={(text) => {
+                          setQuery(text);
+                          onChange(text);
+                        }}
+                        placeholder="Type to search location"
+                        placeholderTextColor="#9CA3AF"
+                        className="flex-1 px-2 py-3 text-gray-900 dark:text-white"
+                      />
+                    </View>
+
+                    {loadingSuggestions ? (
+                      <View className="py-3">
+                        <ActivityIndicator color="#1ED28A" />
+                      </View>
+                    ) : (
+                      suggestions.length > 0 && (
+                        <Animated.View
+                          entering={FadeIn.duration(300)}
+                          exiting={FadeOut.duration(200)}
+                          className="mt-1 rounded-lg border border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]"
+                        >
+                          {suggestions.map((item) => (
+                            <Pressable
+                              key={item.place_id}
+                              onPress={() => {
+                                onChange(item.description);
+                                setQuery(item.description);
+                                setSuggestions([]);
+                              }}
+                              className="px-3 py-2"
+                            >
+                              <Text className="text-[14px] text-gray-900 dark:text-white">
+                                {item.description}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </Animated.View>
+                      )
+                    )}
+                  </>
+                )}
+              />
             </View>
 
             <View className="mt-6">
-              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">Account Type</Text>
+              <Text className="mb-2 text-[14px] font-[500] text-gray-900 dark:text-white">
+                Account Type
+              </Text>
               <View className="flex-row gap-3">
                 {(['patient', 'doctor'] as const).map((role) => (
-                  <Controller key={role} control={control} name="role" render={({ field: { value, onChange } }) => {
-                    const selected = value === role;
-                    return (
-                      <Pressable onPress={() => onChange(role)} className={`h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-[20px] border ${selected ? 'border-[#1ED28A] bg-[#1ED28A]/10' : 'border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]'}`}>
-                        <Checkbox value={selected} onValueChange={() => onChange(role)} color="#10B981" />
-                        <Text className="text-[14px] font-[500] text-gray-900 dark:text-white">{role === 'doctor' ? 'Physician' : 'Patient'}</Text>
-                      </Pressable>
-                    );
-                  }} />
+                  <Controller
+                    key={role}
+                    control={control}
+                    name="role"
+                    render={({ field: { value, onChange } }) => {
+                      const selected = value === role;
+                      return (
+                        <Pressable
+                          onPress={() => onChange(role)}
+                          className={`h-[44px] flex-1 flex-row items-center justify-center gap-2 rounded-[20px] border ${selected ? 'border-[#1ED28A] bg-[#1ED28A]/10' : 'border-gray-300 bg-gray-50 dark:border-[#2F343A] dark:bg-[#15191E]'}`}
+                        >
+                          <Checkbox
+                            value={selected}
+                            onValueChange={() => onChange(role)}
+                            color="#10B981"
+                          />
+                          <Text className="text-[14px] font-[500] text-gray-900 dark:text-white">
+                            {role === 'doctor' ? 'Physician' : 'Patient'}
+                          </Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
                 ))}
               </View>
             </View>
 
-            <View className="mb-8 mt-10 items-center">
-              <ButtonComponent title="Continue" onPress={handleSubmit(onSubmit)} disabled={!isValid || isSubmitting} loading={isSubmitting} style={{ width: 328, borderRadius: 999 }} />
+            <View className="items-center mt-10 mb-8">
+              <ButtonComponent
+                title="Continue"
+                onPress={handleSubmit(onSubmit)}
+                disabled={!isValid || isSubmitting}
+                loading={isSubmitting}
+                style={{ width: 328, borderRadius: 999 }}
+              />
             </View>
 
             {apiError && <Text className="mb-4 text-sm text-red-500">{apiError}</Text>}
           </View>
         </ScrollView>
       </Animated.View>
+
+      {/* ✅ NEW: Success overlay for patients */}
+      {success && (
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(300)}
+          className="absolute inset-0 items-center justify-center bg-black/60"
+        >
+          <Animated.View
+            entering={ZoomIn.duration(500)}
+            exiting={ZoomOut.duration(300)}
+            className="items-center"
+          >
+            <View className="mb-3 h-[80px] w-[80px] items-center justify-center rounded-full bg-[#1ED28A]">
+              <Feather name="check" size={38} color="#fff" />
+            </View>
+            <Text className="text-[18px] font-[600] text-white">Profile Complete!</Text>
+          </Animated.View>
+        </Animated.View>
+      )}
+
       <Toast />
     </>
   );
