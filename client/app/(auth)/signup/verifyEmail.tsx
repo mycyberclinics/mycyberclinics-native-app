@@ -28,20 +28,19 @@ import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 import ButtonComponent from '@/components/ButtonComponent';
 import api from '@/lib/api/client';
 
-// const actionCodeSettings: import('firebase/auth').ActionCodeSettings = {
-//   url: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN_DYNAMIC_LINK as string,
-//   handleCodeInApp: true,
-//   iOS: { bundleId: 'com.mycyberclinics.app' },
-//   android: { packageName: 'com.mycyberclinics.app', installApp: true },
-// };
-
 export default function ConfirmEmailScreen() {
   const router = useRouter();
   useTrackOnboardingStep();
 
   const auth = getFirebaseAuth();
-  const { user, loading, setLoading, verificationSentByBackend, setVerificationSentByBackend } =
-    useAuthStore();
+  const {
+    user,
+    loading,
+    setLoading,
+    verificationSentByBackend,
+    setVerificationSentByBackend,
+    setUser,
+  } = useAuthStore();
 
   const [resending, setResending] = useState(false);
   const [resendCooldownSec, setResendCooldownSec] = useState(0);
@@ -72,17 +71,23 @@ export default function ConfirmEmailScreen() {
     transform: [{ scale: pulse.value }],
   }));
 
+  // Always reload when screen mounts
+  useEffect(() => {
+    reloadAndCheck();
+  }, []);
+
   // reload firebase user and check verification
   const reloadAndCheck = useCallback(async () => {
     try {
       setCheckingVerification(true);
       await reload(getFirebaseAuth().currentUser!);
-      const refreshed = auth.currentUser;
+      const refreshed = getFirebaseAuth().currentUser;
       const isVerified = !!refreshed?.emailVerified;
       setVerified(isVerified);
+      setUser(refreshed ? { id: refreshed.uid, email: refreshed.email || "", emailVerified: refreshed.emailVerified } : null); // update Zustand
+      console.log('[ConfirmEmail] emailVerified after reload:', refreshed?.emailVerified);
       if (isVerified) {
         setLinkDetectedMessage('Email confirmed — thank you!');
-        console.log('[ConfirmEmail] verified true');
       }
     } catch (err) {
       console.error('[ConfirmEmail] reload error', err);
@@ -90,11 +95,12 @@ export default function ConfirmEmailScreen() {
       setCheckingVerification(false);
       setLoading(false);
     }
-  }, [auth, setLoading]);
+  }, [setUser, setLoading]);
 
+  // Watch for changes to auth.currentUser (in case some other part updates it)
   useEffect(() => {
     setVerified(!!auth.currentUser?.emailVerified);
-  }, [auth]);
+  }, [auth.currentUser?.emailVerified]);
 
   // resend handler with cooldown (uses single explicit backend endpoint)
   const handleResend = async () => {
@@ -110,7 +116,7 @@ export default function ConfirmEmailScreen() {
       if (verificationSentByBackend) {
         // Ask backend to resend via the explicit endpoint that signUp expects
         try {
-          console.log('[ConfirmEmail] Requesting backend resend: /api/signup/resend', { email: current.email });
+          console.log('[ConfirmEmail] Requesting backend resend: /api/resend-verification', { email: current.email });
           const r = await api.post('/api/resend-verification', { email: current.email, firebaseUid: current.uid });
           if (r && r.status >= 200 && r.status < 300) {
             setResendCooldownSec(30);
@@ -155,6 +161,7 @@ export default function ConfirmEmailScreen() {
     return () => clearInterval(t);
   }, [resendCooldownSec]);
 
+  // Linking and AppState listeners for verification check
   useEffect(() => {
     const urlListener = ({ url }: { url: string }) => {
       console.log('[ConfirmEmail] Linking url received:', url);
@@ -162,6 +169,7 @@ export default function ConfirmEmailScreen() {
       setLinkDetectedMessage('Returned from email link — checking verification...');
     };
 
+    // Expo SDK 48+ uses addEventListener, older uses on
     const sub = Linking.addEventListener
       ? Linking.addEventListener('url', urlListener)
       : Linking.addEventListener('url', urlListener);

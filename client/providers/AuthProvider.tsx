@@ -9,6 +9,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const auth = getFirebaseAuth();
     const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      console.log('[AuthProvider] onAuthStateChanged fired', { firebaseUser });
       if (firebaseUser) {
         setUser({
           id: firebaseUser.uid,
@@ -18,6 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
       }
       setInitializing(false);
+      setTimeout(() => setInitializing(false), 2000);
     });
 
     return () => unsubscribe();
