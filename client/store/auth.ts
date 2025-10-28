@@ -12,7 +12,7 @@ import {
 } from 'firebase/auth';
 import api from '@/lib/api/client';
 import { BackendUserSchema, BackendUser } from '@/lib/schemas/user';
-import * as SecureStore from 'expo-secure-store';
+import { SafeStorage } from '@/utils/SafeStorage';
 import parseError from '@/utils/parseError';
 
 type AppUser = any;
@@ -100,7 +100,7 @@ const makeStore = (set: any, get: any): AuthState => ({
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const { uid, email: em } = cred.user;
       const token = await cred.user.getIdToken();
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      await SafeStorage.setItem(TOKEN_KEY, token); // <--- UPDATED LINE
 
       try {
         const payload = { email: em, password, firebaseUid: uid };
@@ -172,7 +172,7 @@ const makeStore = (set: any, get: any): AuthState => ({
       const auth = getFirebaseAuth();
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const token = await cred.user.getIdToken();
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      await SafeStorage.setItem(TOKEN_KEY, token); // <--- UPDATED LINE
       set({ user: cred.user });
       await get().loadProfile();
       const profile = get().profile;
@@ -252,6 +252,7 @@ const makeStore = (set: any, get: any): AuthState => ({
         lastStep: null,
         verificationSentByBackend: false,
       });
+      await SafeStorage.deleteItem(TOKEN_KEY); // <--- UPDATED LINE
     } catch (err: any) {
       const e = parseError(err);
       console.error('[AUTH] signOut error:', e.message);
@@ -300,7 +301,7 @@ const makeStore = (set: any, get: any): AuthState => ({
       onIdTokenChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           const token = await firebaseUser.getIdToken();
-          await SecureStore.setItemAsync(TOKEN_KEY, token);
+          await SafeStorage.setItem(TOKEN_KEY, token); // <--- UPDATED LINE
         }
       });
     });
