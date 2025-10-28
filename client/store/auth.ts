@@ -31,6 +31,7 @@ type AuthState = {
   emailVerified: boolean;
   profileCompleted: boolean;
   verificationSentByBackend: boolean;
+  rehydrated: boolean;
 
   setUser: (user: AppUser | null) => void;
   setProfile: (profile: BackendUser | null) => void;
@@ -56,7 +57,7 @@ type AuthState = {
 
 const TOKEN_KEY = 'mc_firebase_id_token';
 
-// All your store state & actions in a function
+// core store creator (no persist baked in)
 const makeStore = (set: any, get: any): AuthState => ({
   token: null,
   user: null,
@@ -71,6 +72,7 @@ const makeStore = (set: any, get: any): AuthState => ({
   emailVerified: false,
   profileCompleted: false,
   verificationSentByBackend: false,
+  rehydrated: false,
 
   setUser: (user) => set({ user }),
   setProfile: (profile) => set({ profile }),
@@ -90,6 +92,7 @@ const makeStore = (set: any, get: any): AuthState => ({
       onboarding: true,
       verificationSentByBackend: false,
     }),
+
   setOnboardingComplete: () =>
     set({ onboarding: false, emailVerified: true, profileCompleted: true }),
 
@@ -100,7 +103,7 @@ const makeStore = (set: any, get: any): AuthState => ({
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const { uid, email: em } = cred.user;
       const token = await cred.user.getIdToken();
-      await SafeStorage.setItem(TOKEN_KEY, token); // <--- UPDATED LINE
+      await SafeStorage.setItem(TOKEN_KEY, token);
 
       try {
         const payload = { email: em, password, firebaseUid: uid };
@@ -172,7 +175,7 @@ const makeStore = (set: any, get: any): AuthState => ({
       const auth = getFirebaseAuth();
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const token = await cred.user.getIdToken();
-      await SafeStorage.setItem(TOKEN_KEY, token); // <--- UPDATED LINE
+      await SafeStorage.setItem(TOKEN_KEY, token);
       set({ user: cred.user });
       await get().loadProfile();
       const profile = get().profile;
@@ -252,13 +255,14 @@ const makeStore = (set: any, get: any): AuthState => ({
         lastStep: null,
         verificationSentByBackend: false,
       });
-      await SafeStorage.deleteItem(TOKEN_KEY); // <--- UPDATED LINE
+      await SafeStorage.deleteItem(TOKEN_KEY);
     } catch (err: any) {
       const e = parseError(err);
       console.error('[AUTH] signOut error:', e.message);
     }
   },
 
+  // rehydrate: perform Firebase auth init and mark rehydrated when done
   rehydrate: async () => {
     const auth = getFirebaseAuth();
     set({ loading: false });
@@ -290,7 +294,7 @@ const makeStore = (set: any, get: any): AuthState => ({
           }
         }
 
-        set({ loading: false, initializing: false });
+        set({ loading: false, initializing: false, rehydrated: true });
         resolve();
       });
 
@@ -301,29 +305,31 @@ const makeStore = (set: any, get: any): AuthState => ({
       onIdTokenChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           const token = await firebaseUser.getIdToken();
-          await SafeStorage.setItem(TOKEN_KEY, token); // <--- UPDATED LINE
+          await SafeStorage.setItem(TOKEN_KEY, token);
         }
       });
     });
   },
 });
 
-// Platform specific export (with explicit type for TS!)
-// We use _useAuthStore internally, and export useAuthStore with the correct type.
+// Create the store: persist only on native, plain store on web
 let _useAuthStore: UseBoundStore<StoreApi<AuthState>>;
 
 if (Platform.OS === 'web') {
+  // plain, non-persisted store for web
   _useAuthStore = create<AuthState>(makeStore);
 } else {
+  // native: require persist utilities at runtime only
   const { persist, createJSONStorage } = require('zustand/middleware');
   const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  _useAuthStore = create<AuthState>(
+
+  _useAuthStore = create<AuthState>()(
     persist(makeStore, {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      // Do not mutate store via onRehydrateStorage; use rehydrate() action above.
     }),
   );
 }
 
-// This ensures correct typing everywhere!
 export const useAuthStore: typeof _useAuthStore = _useAuthStore;

@@ -15,7 +15,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import ButtonComponent from '@/components/ButtonComponent';
 import { BackendUserSchema } from '@/lib/schemas/user';
 import { useAuthStore } from '@/store/auth';
@@ -25,8 +24,8 @@ import Toast from 'react-native-toast-message';
 import { updateProfile } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
-
 import parseError from '@/utils/parseError';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 /**
  * Schema + Types
@@ -64,26 +63,25 @@ export default function PersonalInfoScreen() {
   // success overlay flag
   const [success, setSuccess] = useState(false);
 
-  // Google Places autocomplete
+  // --- GOOGLE PLACES AUTOCOMPLETE: WEB FIX ---
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (query.length < 2) {
         setSuggestions([]);
         return;
       }
-
       try {
         setLoadingSuggestions(true);
         const key = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
-        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-          query,
-        )}&key=${key}&language=en&components=country:ng`;
-
+        // On web, use the "cors-anywhere" proxy for development (never in production!)
+        let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${key}&language=en&components=country:ng`;
+        if (Platform.OS === 'web') {
+          url = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+        }
         const res = await fetch(url);
         const data = await res.json();
-
-        if (data.status === 'OK') {
-          setSuggestions(data.predictions);
+        if (data.status === 'OK' || data.predictions) {
+          setSuggestions(data.predictions ?? []);
           setApiError(null);
         } else {
           setSuggestions([]);
@@ -91,25 +89,24 @@ export default function PersonalInfoScreen() {
         }
       } catch (err) {
         console.error('❌ Failed to fetch suggestions:', err);
-        setApiError('Could not connect to Google Places API.');
+        setApiError('Could not connect to Google Places API');
       } finally {
         setLoadingSuggestions(false);
       }
     };
-
     const timer = setTimeout(fetchSuggestions, 400);
     return () => clearTimeout(timer);
   }, [query]);
 
   // Use the typed FormValues for useForm.
-  // TypeScript/react-hook-form can sometimes complain about the resolver generic shape.
-  // Cast the zodResolver to Resolver<FormValues> to align types.
   const resolver = zodResolver(ProfileCompletionSchema) as unknown as Resolver<FormValues>;
 
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
+    setValue,
+    watch,
   } = useForm<FormValues>({
     resolver,
     mode: 'onChange',
@@ -122,6 +119,9 @@ export default function PersonalInfoScreen() {
       role: 'patient',
     },
   });
+
+  // For web date input
+  const dob = watch('dob');
 
   /**
    * Try endpoints with POST/PUT (keeps network logic resilient while backend path is confirmed)
@@ -136,23 +136,12 @@ export default function PersonalInfoScreen() {
     for (const ep of endpoints) {
       for (const method of methods) {
         try {
-          console.log(
-            `[API] Attempting ${method.toUpperCase()} ${ep} with payload:`,
-            payload,
-            'headers:',
-            headers,
-          );
           let resp;
           if (method === 'post') {
             resp = await api.post(ep, payload, { headers });
           } else {
             resp = await api.put(ep, payload, { headers });
           }
-          console.log(`[API] Success ${method.toUpperCase()} ${ep} →`, {
-            status: resp.status,
-            data: resp.data,
-            headers: resp.headers,
-          });
           return resp;
         } catch (err) {
           lastErr = err;
@@ -162,12 +151,6 @@ export default function PersonalInfoScreen() {
             parsed.response?.statusCode ??
             parsed.response?.status_code ??
             undefined;
-          console.warn(
-            `[API] ${method.toUpperCase()} ${ep} failed:`,
-            parsed.response ?? parsed.message,
-            'status:',
-            status,
-          );
           if (status && status !== 404) {
             throw err;
           }
@@ -181,14 +164,12 @@ export default function PersonalInfoScreen() {
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
       setApiError(null);
-      console.log('[Personal Info Submitted]', data);
 
       if (currentUser && data.displayName) {
         try {
           await updateProfile(currentUser, { displayName: data.displayName });
-          console.log('[PersonalInfo] displayName updated in Firebase:', data.displayName);
         } catch (err) {
-          console.warn('[PersonalInfo] updateProfile failed:', err);
+          // ignore
         }
       }
 
@@ -202,12 +183,11 @@ export default function PersonalInfoScreen() {
         bio: '',
       };
 
-      // Attach idToken explicitly
       let token: string | undefined = undefined;
       try {
         token = await currentUser?.getIdToken();
       } catch (err) {
-        console.warn('[PersonalInfo] failed to get idToken:', err);
+        // ignore
       }
       const headers = {
         Authorization: token ? `Bearer ${token}` : undefined,
@@ -217,8 +197,6 @@ export default function PersonalInfoScreen() {
       const endpoints = ['/api/profile/complete', '/profile/complete', '/api/profile', '/profile'];
 
       const resp = await tryEndpointsWithMethods(endpoints, payload, headers);
-
-      console.log('[Profile Complete Response]', resp.data);
 
       setOnboardingComplete();
       await syncProfile({ ...data, role: data.role });
@@ -237,31 +215,22 @@ export default function PersonalInfoScreen() {
       const normalizedRole = data.role === 'doctor' ? 'physician' : data.role;
 
       if (normalizedRole === 'physician') {
-        // Doctors continue to credential step immediately (no overlay change)
         router.push('/(auth)/signup/doctorCredential');
       } else {
-        // ✅ NEW: show success overlay and delay navigation by ~1s for patients
         setSuccess(true);
-        // Ensure onboarding state is already set (done above)
         setTimeout(() => {
           useAuthStore.setState({ onboarding: false });
-          console.log('[PersonalInfo] ✅ Onboarding complete, redirecting to home');
           router.replace('/(main)/home');
         }, 1200);
       }
     } catch (error) {
       const e = parseError(error);
-      console.error(
-        '[Personal Info] Error syncing:',
-        e.response ?? e.message ?? e.original ?? error,
-      );
       const message =
         e.response?.data?.error ||
         e.response?.data?.message ||
         e.message ||
         'Failed to save profile. Please check your internet connection and try again.';
       setApiError(message);
-
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -368,31 +337,53 @@ export default function PersonalInfoScreen() {
               <Controller
                 control={control}
                 name="dob"
-                render={({ field: { value, onChange } }) => (
-                  <>
-                    <Pressable onPress={() => setShowDatePicker(true)}>
-                      <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
-                        <Feather name="calendar" size={18} color="#9CA3AF" />
-                        <Text className="flex-1 px-2 text-gray-900 dark:text-white">
-                          {value ? value.toDateString() : 'Select date of birth'}
-                        </Text>
-                        <Feather name="chevron-down" size={18} color="#9CA3AF" />
-                      </View>
-                    </Pressable>
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={value || new Date()}
-                        mode="date"
-                        display="spinner"
-                        maximumDate={new Date()}
-                        onChange={(_, date) => {
-                          setShowDatePicker(false);
-                          if (date) onChange(date);
-                        }}
-                      />
-                    )}
-                  </>
-                )}
+                render={({ field: { value, onChange } }) =>
+                  Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={value ? new Date(value).toISOString().substring(0, 10) : ''}
+                      onChange={e => {
+                        if (e.target.value) {
+                          onChange(new Date(e.target.value));
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: 10,
+                        fontSize: 16,
+                        borderRadius: 8,
+                        border: '1px solid #ccc',
+                        marginTop: 8,
+                        marginBottom: errors.dob ? 0 : 12,
+                        color: '#111827',
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Pressable onPress={() => setShowDatePicker(true)}>
+                        <View className="h-[48px] flex-row items-center rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] dark:border-[#2F343A] dark:bg-[#15191E]">
+                          <Feather name="calendar" size={18} color="#9CA3AF" />
+                          <Text className="flex-1 px-2 text-gray-900 dark:text-white">
+                            {value ? new Date(value).toDateString() : 'Select date of birth'}
+                          </Text>
+                          <Feather name="chevron-down" size={18} color="#9CA3AF" />
+                        </View>
+                      </Pressable>
+                      {showDatePicker && (
+                        <DateTimePicker
+                          value={value || new Date()}
+                          mode="date"
+                          display="spinner"
+                          maximumDate={new Date()}
+                          onChange={(_: DateTimePickerEvent, date?: Date) => {
+                            setShowDatePicker(false);
+                            if (date) onChange(date);
+                          }}
+                        />
+                      )}
+                    </>
+                  )
+                }
               />
               {errors.dob && (
                 <Text className="mt-1 text-sm text-red-400">{errors.dob.message}</Text>
@@ -506,6 +497,7 @@ export default function PersonalInfoScreen() {
                   </>
                 )}
               />
+              {apiError && <Text className="mt-2 text-xs text-red-500">{apiError}</Text>}
             </View>
 
             <View className="mt-6">
@@ -555,8 +547,6 @@ export default function PersonalInfoScreen() {
           </View>
         </ScrollView>
       </Animated.View>
-
-      {/* ✅ NEW: Success overlay for patients */}
       {success && (
         <Animated.View
           entering={FadeIn.duration(300)}
@@ -575,7 +565,6 @@ export default function PersonalInfoScreen() {
           </Animated.View>
         </Animated.View>
       )}
-
       <Toast />
     </>
   );
