@@ -122,7 +122,16 @@ export async function uploadToFirebaseStorage(
     const destPath = path.join(uploadsDir, destName);
 
     // copy (don't move) so the multipart temp file lifecycle is unaffected
-    await fs.copyFile(filePath, destPath);
+    try {
+      await fs.copyFile(filePath, destPath);
+    } catch (err: any) {
+      console.error("[firebaseStorage] fs.copyFile failed:", err && (err.message || err), { filePath, destPath });
+      // Give as much info as possible in dev to diagnose root cause
+      if (process.env.NODE_ENV !== "production") {
+        throw new Error(`Local file copy failed: ${err?.message || String(err)} (src=${filePath}, dest=${destPath})`);
+      }
+      throw err;
+    }
 
     // Return a URL that your server will serve (see change in src/index.ts which serves /uploads)
     const host = process.env.LOCAL_UPLOADS_BASE_URL || `http://localhost:${process.env.PORT || 4000}`;
@@ -140,25 +149,17 @@ export async function uploadToFirebaseStorage(
 
   // 2) FIREBASE STORAGE EMULATOR MODE
   if (String(process.env.USE_FIREBASE_EMULATOR || "").toLowerCase() === "true") {
-    // Use @google-cloud/storage client pointed at emulator
-    // NOTE: ensure you installed @google-cloud/storage: npm install @google-cloud/storage
-    // The emulator endpoint can be something like "http://localhost:9199"
     const emulatorHost = process.env.STORAGE_EMULATOR_HOST || process.env.FIREBASE_STORAGE_EMULATOR_HOST;
     if (!emulatorHost) {
       throw new Error("STORAGE_EMULATOR_HOST must be set when USE_FIREBASE_EMULATOR=true");
     }
 
-    // dynamic import so code still runs if package isn't installed when not using emulator
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { Storage } = require("@google-cloud/storage");
     const projectId = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || "dev-project";
 
-    // @google-cloud/storage accepts apiEndpoint (with protocol) for emulator
     const storageClient = new Storage({
       projectId,
       apiEndpoint: emulatorHost,
-      // emulator typically does not require credentials
-      // do NOT pass credentials to avoid accidental auth enforcement
     });
 
     const bucket = storageClient.bucket(chosenBucket);
@@ -170,10 +171,6 @@ export async function uploadToFirebaseStorage(
       },
     });
 
-    // Construct an emulator-accessible URL:
-    // many storage emulators (including firebase-tools) expose files at:
-    //   {EMULATOR_HOST}/{bucket}/{object}
-    // e.g., http://localhost:9199/my-bucket/userdocs/uid_123.pdf
     const trimmed = emulatorHost.replace(/\/$/, "");
     const url = `${trimmed}/${chosenBucket}/${safeName}`;
     return url;
@@ -186,12 +183,17 @@ export async function uploadToFirebaseStorage(
     throw new Error("Firebase storage bucket not configured or accessible.");
   }
 
-  await bucket.upload(filePath, {
-    destination: safeName,
-    metadata: {
-      contentType: file.type || file.mimetype || "application/octet-stream",
-    },
-  });
+  try {
+    await bucket.upload(filePath, {
+      destination: safeName,
+      metadata: {
+        contentType: file.type || file.mimetype || "application/octet-stream",
+      },
+    });
+  } catch (err: any) {
+    console.error("[firebaseStorage] bucket.upload failed:", err && (err.message || err), { filePath, chosenBucket, safeName });
+    throw err;
+  }
 
   // create a signed URL (long expiry for dev). In production adjust expiry and permissions.
   const [url] = await bucket.file(safeName).getSignedUrl({
