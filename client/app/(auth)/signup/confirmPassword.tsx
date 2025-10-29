@@ -78,7 +78,10 @@ export default function ConfirmPasswordScreen() {
       const signupSuccess = await signUp(email!, password!);
 
       if (!signupSuccess) {
-        Alert.alert('Sign up failed', 'Unable to create account. Please check your info and try again.');
+        Alert.alert(
+          'Sign up failed',
+          'Unable to create account. Please check your info and try again.',
+        );
         return;
       }
 
@@ -90,7 +93,7 @@ export default function ConfirmPasswordScreen() {
         if (verificationSentByBackend) {
           // Backend already sent a custom template. Do not show any error or popup.
           console.log(
-            '[ConfirmPassword] Backend sent verification email — skipping client sendEmailVerification'
+            '[ConfirmPassword] Backend sent verification email — skipping client sendEmailVerification',
           );
           // Optionally show a toast or nothing at all.
         } else {
