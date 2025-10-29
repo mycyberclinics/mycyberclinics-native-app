@@ -1,3 +1,4 @@
+// unchanged file content except additional console logging if needed
 import React from 'react';
 import {
   View,
@@ -54,8 +55,9 @@ export default function SignInScreen() {
 
     try {
       await signIn(data.email, data.password);
-      const user = useAuthStore.getState().user;
-      if (user) {
+      const userState = useAuthStore.getState().user;
+      console.log('[SignIn] post signIn store user:', userState);
+      if (userState) {
         setLoading(true);
         try {
           await fetchProfile();
@@ -67,7 +69,7 @@ export default function SignInScreen() {
         router.replace('/(main)/home');
       }
     } catch (error) {
-      console.error('[SignIn] Backend profile fetch failed:', error);
+      console.error('[SignIn] unexpected error:', error);
     }
   };
 

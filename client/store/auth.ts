@@ -57,7 +57,7 @@ type AuthState = {
 
 const TOKEN_KEY = 'mc_firebase_id_token';
 
-// core store creator (no persist baked in)
+// core state creator
 const makeStore = (set: any, get: any): AuthState => ({
   token: null,
   user: null,
@@ -177,9 +177,11 @@ const makeStore = (set: any, get: any): AuthState => ({
       const token = await cred.user.getIdToken();
       await SafeStorage.setItem(TOKEN_KEY, token);
       set({ user: cred.user });
+      // attempt to hydrate profile, but be tolerant of parse errors
       await get().loadProfile();
       const profile = get().profile;
-      const onboardingNeeded = !profile || !profile.displayName || !profile.role;
+      // only decide onboarding if profile is a valid object
+      const onboardingNeeded = profile ? !profile.displayName || !profile.role : get().onboarding;
       set({
         onboarding: onboardingNeeded,
         lastStep: get().lastStep ?? '/(auth)/signup/emailPassword',
@@ -193,20 +195,41 @@ const makeStore = (set: any, get: any): AuthState => ({
   loadProfile: async () => {
     try {
       const user = get().user;
-      if (!user) throw new Error('No authenticated user found');
+      if (!user) {
+        console.warn('[AUTH] loadProfile: no firebase user, skipping');
+        return;
+      }
       const token = await user.getIdToken();
-      const response = await api.get('api/profile', {
+      const response = await api.get('/api/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const validated = BackendUserSchema.parse(response.data);
-      const normalizedRole = validated.role === 'physician' ? 'doctor' : validated.role;
-      set({ profile: { ...validated, role: normalizedRole } });
-      if (user.emailVerified && validated.email) {
-        set({ onboarding: false, lastStep: null });
+
+      const data = response.data;
+      // Defensive check: backend sometimes returns a string or message -> bail and log
+      if (!data || typeof data === 'string') {
+        console.warn('[AUTH] loadProfile unexpected response type — not an object:', typeof data, data);
+        // Do NOT flip onboarding state here; keep existing store value.
+        return;
+      }
+
+      // Validate with Zod — if invalid, log and bail (don't throw)
+      try {
+        const validated = BackendUserSchema.parse(data);
+        const normalizedRole = validated.role === 'physician' ? 'doctor' : validated.role;
+        set({ profile: { ...validated, role: normalizedRole } });
+        // only clear onboarding if firebase shows emailVerified AND backend profile has email
+        if (user.emailVerified && validated.email) {
+          set({ onboarding: false, lastStep: null });
+        }
+      } catch (zErr) {
+        console.warn('[AUTH] loadProfile Zod validation failed:', zErr);
+        // Validation failed; do not set profile or change onboarding — leave store as-is
+        return;
       }
     } catch (err: any) {
       const e = parseError(err);
-      console.error('[AUTH] loadProfile error:', e.message);
+      console.error('[AUTH] loadProfile error:', e.message ?? e);
+      // do not throw further
     }
   },
 
@@ -262,40 +285,42 @@ const makeStore = (set: any, get: any): AuthState => ({
     }
   },
 
-  // rehydrate: perform Firebase auth init and mark rehydrated when done
   rehydrate: async () => {
     const auth = getFirebaseAuth();
     set({ loading: false });
     return new Promise<void>((resolve) => {
       onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-          set({ user: firebaseUser });
-          await get().loadProfile();
-          const profile = get().profile;
-          const onboardingNeeded = !profile || !profile.displayName || !profile.role;
-          const { lastStep } = get();
-          set({
-            onboarding: onboardingNeeded,
-            lastStep: lastStep || '/(auth)/signup/emailPassword',
-          });
-        }
-
-        if (!firebaseUser && get().tempEmail && get().tempPassword) {
-          try {
-            const cred = await signInWithEmailAndPassword(
-              auth,
-              get().tempEmail as string,
-              get().tempPassword as string,
-            );
-            set({ user: cred.user });
-          } catch (err) {
-            const e = parseError(err);
-            console.warn('[AUTH] Silent sign-in failed:', e.message);
+        try {
+          if (firebaseUser) {
+            set({ user: firebaseUser });
+            // attempt to load profile but be tolerant
+            await get().loadProfile();
+            const profile = get().profile;
+            // decide onboarding only if profile is present and valid; otherwise keep existing
+            const onboardingNeeded = profile ? !profile.displayName || !profile.role : get().onboarding;
+            set({
+              onboarding: onboardingNeeded,
+              lastStep: get().lastStep ?? (onboardingNeeded ? '/(auth)/signup/emailPassword' : null),
+            });
           }
-        }
 
-        set({ loading: false, initializing: false, rehydrated: true });
-        resolve();
+          if (!firebaseUser && get().tempEmail && get().tempPassword) {
+            try {
+              const cred = await signInWithEmailAndPassword(
+                auth,
+                get().tempEmail as string,
+                get().tempPassword as string,
+              );
+              set({ user: cred.user });
+            } catch (err) {
+              const e = parseError(err);
+              console.warn('[AUTH] Silent sign-in failed:', e.message);
+            }
+          }
+        } finally {
+          set({ loading: false, initializing: false, rehydrated: true });
+          resolve();
+        }
       });
 
       if (get().user?.emailVerified && get().onboarding) {
@@ -312,14 +337,12 @@ const makeStore = (set: any, get: any): AuthState => ({
   },
 });
 
-// Create the store: persist only on native, plain store on web
+// Create store: no top-level middleware import. Persist only on native branch.
 let _useAuthStore: UseBoundStore<StoreApi<AuthState>>;
 
 if (Platform.OS === 'web') {
-  // plain, non-persisted store for web
   _useAuthStore = create<AuthState>(makeStore);
 } else {
-  // native: require persist utilities at runtime only
   const { persist, createJSONStorage } = require('zustand/middleware');
   const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 
@@ -327,7 +350,6 @@ if (Platform.OS === 'web') {
     persist(makeStore, {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      // Do not mutate store via onRehydrateStorage; use rehydrate() action above.
     }),
   );
 }

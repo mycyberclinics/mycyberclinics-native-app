@@ -7,11 +7,7 @@ import {
   useColorScheme,
   Image,
   Alert,
-  Linking,
   AppState,
-  AppStateStatus,
-  Platform,
-  StyleSheet,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -30,24 +26,21 @@ import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 import ButtonComponent from '@/components/ButtonComponent';
 import api from '@/lib/api/client';
 
-// ✅ Added: Web container to center and limit width
-const styles = StyleSheet.create({
-  pageBG: {
-    flex: 1,
-  },
-  webContainer: Platform.select({
-    web: {
-      width: '100%',
-      maxWidth: 480, // adjust as needed (e.g., 420–560)
-      alignSelf: 'center',
-    },
-    default: {},
-  }),
-  fullWidth: { width: '100%' },
-});
+/**
+ * Layout adjustments:
+ * - Reduced vertical spacing between the "Almost there" section and the "Didn't receive the link?" row
+ *   by grouping them in a single centered block and using smaller margins.
+ * - Continue button remains centered near the bottom.
+ * - Theme-aware text colors preserved (dark -> light text, light -> dark text).
+ *
+ * Replace the existing file with this one to reduce the gap.
+ */
 
 export default function ConfirmEmailScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   useTrackOnboardingStep();
 
   const auth = getFirebaseAuth();
@@ -58,6 +51,9 @@ export default function ConfirmEmailScreen() {
     verificationSentByBackend,
     setVerificationSentByBackend,
     setUser,
+    loadProfile,
+    setOnboardingComplete,
+    setLastStep,
   } = useAuthStore();
 
   const [resending, setResending] = useState(false);
@@ -67,9 +63,7 @@ export default function ConfirmEmailScreen() {
   const [linkDetectedMessage, setLinkDetectedMessage] = useState<string | null>(null);
   const [tooManyRequests, setTooManyRequests] = useState<boolean>(false);
 
-  const colorScheme = useColorScheme();
-
-  // Pulse animation
+  // subtle pulse for Continue when actionable
   const pulse = useSharedValue(1);
   useEffect(() => {
     if (!verified) {
@@ -85,10 +79,7 @@ export default function ConfirmEmailScreen() {
       pulse.value = withTiming(1, { duration: 120 });
     }
   }, [verified, pulse]);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-  }));
+  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   const reloadAndCheck = useCallback(async () => {
     try {
@@ -97,35 +88,33 @@ export default function ConfirmEmailScreen() {
       const refreshed = getFirebaseAuth().currentUser;
       const isVerified = !!refreshed?.emailVerified;
       setVerified(isVerified);
-      setUser(
-        refreshed
-          ? {
-              id: refreshed.uid,
-              email: refreshed.email || '',
-              emailVerified: refreshed.emailVerified,
-            }
-          : null,
-      );
-      if (isVerified) {
-        setLinkDetectedMessage('Email confirmed — thank you!');
+
+      if (refreshed) {
+        setUser(refreshed);
       }
+
+      if (isVerified) {
+        setLinkDetectedMessage('Email confirmed — you may continue.');
+      } else {
+        setLinkDetectedMessage(null);
+      }
+
+      console.log('[ConfirmEmail] FULL USER OBJECT:', refreshed);
+      console.log('[ConfirmEmail] emailVerified after reload:', refreshed?.emailVerified);
     } catch (err) {
       console.error('[ConfirmEmail] reload error', err);
     } finally {
       setCheckingVerification(false);
       setLoading(false);
     }
-  }, [setUser, setLoading]);
+  }, [setLoading, setUser]);
 
   useEffect(() => {
     reloadAndCheck();
-  }, []);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
+    const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') reloadAndCheck();
     });
-    return () => subscription?.remove();
+    return () => sub?.remove && sub.remove();
   }, [reloadAndCheck]);
 
   useEffect(() => {
@@ -135,7 +124,7 @@ export default function ConfirmEmailScreen() {
   const handleResend = async () => {
     const current = auth.currentUser;
     if (!current) {
-      Alert.alert('Error 🔒', 'No authenticated user found.');
+      Alert.alert('Error', 'No authenticated user found.');
       return;
     }
 
@@ -143,10 +132,7 @@ export default function ConfirmEmailScreen() {
       setResending(true);
       if (verificationSentByBackend) {
         try {
-          const r = await api.post('/api/resend-verification', {
-            email: current.email,
-            firebaseUid: current.uid,
-          });
+          const r = await api.post('/api/resend-verification', { email: current.email, firebaseUid: current.uid });
           if (r && r.status >= 200 && r.status < 300) {
             setResendCooldownSec(60);
             Alert.alert('Verification Sent', 'A verification link was (re)sent via backend.');
@@ -157,6 +143,7 @@ export default function ConfirmEmailScreen() {
             Alert.alert('Error', 'Backend resend returned unexpected response.');
           }
         } catch (err: any) {
+          console.error('[ConfirmEmail] backend resend error', err);
           Alert.alert('Error', 'Could not ask backend to resend verification email.');
         }
       }
@@ -169,7 +156,7 @@ export default function ConfirmEmailScreen() {
       } catch (err: any) {
         if (err?.code === 'auth/too-many-requests') {
           setTooManyRequests(true);
-          Alert.alert('Error', 'Too many requests. Please wait before retrying.');
+          Alert.alert('Error', "You've requested too many verification emails. Please wait.");
         } else {
           Alert.alert('Error', 'Failed to resend verification via Firebase.');
         }
@@ -193,34 +180,38 @@ export default function ConfirmEmailScreen() {
     return () => clearInterval(t);
   }, [resendCooldownSec]);
 
-  useEffect(() => {
-    const urlListener = ({ url }: { url: string }) => {
-      reloadAndCheck();
-      setLinkDetectedMessage('Returned from email link — checking verification...');
-    };
-
-    const sub = Linking.addEventListener
-      ? Linking.addEventListener('url', urlListener)
-      : Linking.addEventListener('url', urlListener);
-
-    return () => {
-      try {
-        if (sub && typeof sub.remove === 'function') sub.remove();
-      } catch (e) {
-        console.error("Couldn't remove listener: ", e);
-      }
-    };
-  }, [reloadAndCheck]);
-
   const handleContinue = async () => {
     if (!verified) {
-      Alert.alert('Not verified!', 'Please click the verification link in your email first. 🚫');
+      Alert.alert('Not verified', 'Please click the verification link in your email first.');
       return;
     }
 
-    const auth = getFirebaseAuth();
-    await auth.currentUser?.getIdToken(true);
-    router.replace('/(auth)/signup/personalInfo');
+    try {
+      setCheckingVerification(true);
+
+      try {
+        await getFirebaseAuth().currentUser?.getIdToken(true);
+      } catch (e) {
+        console.warn('[ConfirmEmail] getIdToken(true) failed:', e);
+      }
+
+      try {
+        await loadProfile();
+      } catch (err) {
+        console.warn('[ConfirmEmail] loadProfile after verification failed:', err);
+      }
+
+      setOnboardingComplete();
+      setLastStep(null);
+
+      router.replace('/(auth)/signup/personalInfo');
+    } catch (err) {
+      console.error('[ConfirmEmail] continue error', err);
+      Alert.alert('Error', 'Could not continue. Please try again.');
+    } finally {
+      setCheckingVerification(false);
+      setLoading(false);
+    }
   };
 
   // ✅ Button width logic same as Step1Screen
@@ -228,110 +219,106 @@ export default function ConfirmEmailScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-      <View style={styles.pageBG} className=" bg-card-cardBGLight dark:bg-bodyBG">
-        <View style={styles.webContainer} className="justify-between flex-1 w-full px-6 ">
-          <View className="flex flex-col items-start justify-center gap-4 mt-10">
-            <View className="mt-8">
-              <Pressable
-                onPress={() => {
-                  if (router.canGoBack()) router.back();
-                  else router.replace('/(auth)/signup/confirmPassword');
-                }}
-                className="flex h-[40px] w-[40px] items-center justify-center rounded-full border border-card-cardBorder dark:border-misc-arrowBorder dark:bg-misc-circleBtnDark "
-              >
-                <Feather
-                  name="arrow-left"
-                  size={22}
-                  color={colorScheme === 'dark' ? '#F5F5F5' : '#111827'}
-                />
-              </Pressable>
-            </View>
+      <View
+        style={{
+          flex: 1,
+          paddingHorizontal: 24,
+          paddingTop: 20,
+          paddingBottom: 28,
+          backgroundColor: isDark ? '#0B0E11' : '#FFFFFF',
+        }}
+      >
+        {/* Top back button */}
+        <View style={{ marginBottom: 8 }}>
+          <Pressable
+            onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.replace('/(auth)/signup/confirmPassword');
+            }}
+            style={{
+              height: 40,
+              width: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: isDark ? '#2F343A' : '#E5E7EB',
+            }}
+          >
+            <Feather name="arrow-left" size={22} color={isDark ? '#F5F5F5' : '#111827'} />
+          </Pressable>
+        </View>
 
-            <View className="flex flex-col items-center justify-center w-full gap-4">
-              <View className="h-[120px] w-[120px]">
-                <Image source={require('@/assets/images/letter.png')} className="w-full h-full" />
-              </View>
+        {/* Centered block: icon, heading, description, and the "Didn't receive..." row directly under it */}
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Image
+            source={require('@/assets/images/letter.png')}
+            style={{ width: 120, height: 120, marginBottom: 12 }}
+          />
 
-              <View className="flex flex-col items-center w-full gap-1 px-4 mx-auto">
-                <Text className="text-[20px] font-[700] text-[#111827] dark:text-white">
-                  Almost there!
-                </Text>
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: '700',
+              color: isDark ? '#FFFFFF' : '#111827',
+              textAlign: 'center',
+            }}
+          >
+            Almost there!
+          </Text>
 
-                <Text className="mt-2 w-[281px] text-center text-[14px] leading-6 text-[#4B5563] dark:text-[#D1D5DB]">
-                  Click the link sent to the email{' '}
-                  <Text className="font-[600] text-text-accentLight dark:text-text-accentDark">
-                    {user?.email ?? '(your email)'}
-                  </Text>
-                  .
-                </Text>
+          <Text
+            style={{
+              marginTop: 10,
+              maxWidth: 340,
+              textAlign: 'center',
+              color: isDark ? '#D1D5DB' : '#4B5563',
+            }}
+          >
+            Click the link sent to the email{' '}
+            <Text style={{ fontWeight: '600', color: isDark ? '#10B981' : '#047857' }}>
+              {user?.email ?? '(your email)'}
+            </Text>
+            .
+          </Text>
 
-                {linkDetectedMessage && (
-                  <Text className="mt-2 text-xl text-center text-white">{linkDetectedMessage}</Text>
-                )}
-                {verified && (
-                  <Text className="mt-2 text-4xl text-center text-green-600">
-                    You may continue now.
-                  </Text>
-                )}
-                {tooManyRequests && (
-                  <Text className="mt-2 text-base text-center text-red-600">
-                    Too many verification requests. Please wait before retrying.
-                  </Text>
-                )}
-              </View>
+          {linkDetectedMessage ? (
+            <Text style={{ marginTop: 10, color: isDark ? '#A7F3D0' : '#065F46' }}>{linkDetectedMessage}</Text>
+          ) : null}
 
-              <View className="flex-row items-center justify-center mt-4">
-                <Text className="text-[14px] font-[500] text-text-primaryLight dark:text-text-primaryDark">
-                  {"Didn't receive the link?"}
-                </Text>
+          {verified && <Text style={{ marginTop: 10, fontSize: 28, color: '#10B981' }}>You may continue now.</Text>}
 
-                <Pressable
-                  onPress={handleResend}
-                  disabled={resending || resendCooldownSec > 0 || tooManyRequests}
-                  className="ml-2"
-                >
-                  <Text
-                    className={`text-[14px] font-[600] ${
-                      resending || resendCooldownSec > 0 || tooManyRequests
-                        ? 'text-gray-400'
-                        : 'text-emerald-500'
-                    }`}
-                  >
-                    {resending
-                      ? 'Sending...'
-                      : resendCooldownSec > 0
-                        ? `Retry in ${resendCooldownSec}s`
-                        : tooManyRequests
-                          ? 'Wait before retry'
-                          : 'Re-send'}
-                  </Text>
-                </Pressable>
+          {/* Reduced spacing: put the "Didn't receive the link?" row close to the description */}
+          <View style={{ marginTop: 18, flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ color: isDark ? '#D1D5DB' : '#4B5563' }}>Didn't receive the link?</Text>
 
-                <Pressable
-                  onPress={reloadAndCheck}
-                  disabled={checkingVerification}
-                  className="ml-4"
-                >
-                  <Text className="text-[14px] font-[600] text-emerald-500">Check again</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          <View className="items-center justify-center w-full gap-6 mb-10 ">
-            <Animated.View
-              style={[pulseStyle, styles.fullWidth]}
-              className="w-full border border-red-700"
+            <Pressable
+              onPress={handleResend}
+              disabled={resending || resendCooldownSec > 0 || tooManyRequests}
+              style={{ marginLeft: 12 }}
             >
-              <ButtonComponent
-                title="Continue"
-                onPress={handleContinue}
-                loading={checkingVerification || loading}
-                disabled={!verified || checkingVerification || loading}
-                style={{ width: buttonWidth }}
-              />
-            </Animated.View>
+              <Text style={{ color: '#10B981' }}>
+                {resending ? 'Sending...' : resendCooldownSec > 0 ? `Retry in ${resendCooldownSec}s` : 'Re-send'}
+              </Text>
+            </Pressable>
+
+            <Pressable onPress={reloadAndCheck} style={{ marginLeft: 12 }}>
+              <Text style={{ color: '#10B981' }}>Check again</Text>
+            </Pressable>
           </View>
+        </View>
+
+        {/* Continue button area (near bottom) */}
+        <View style={{ alignItems: 'center' }}>
+          <Animated.View style={[{ width: '100%', maxWidth: 328 }, pulseStyle]}>
+            <ButtonComponent
+              title="Continue"
+              onPress={handleContinue}
+              loading={checkingVerification || loading}
+              disabled={!verified || checkingVerification || loading}
+              style={{ width: '100%' }}
+            />
+          </Animated.View>
         </View>
       </View>
     </ScrollView>
