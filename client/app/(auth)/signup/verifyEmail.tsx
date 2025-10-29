@@ -8,6 +8,7 @@ import {
   Image,
   Alert,
   AppState,
+  Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -132,7 +133,10 @@ export default function ConfirmEmailScreen() {
       setResending(true);
       if (verificationSentByBackend) {
         try {
-          const r = await api.post('/api/resend-verification', { email: current.email, firebaseUid: current.uid });
+          const r = await api.post('/api/resend-verification', {
+            email: current.email,
+            firebaseUid: current.uid,
+          });
           if (r && r.status >= 200 && r.status < 300) {
             setResendCooldownSec(60);
             Alert.alert('Verification Sent', 'A verification link was (re)sent via backend.');
@@ -214,7 +218,6 @@ export default function ConfirmEmailScreen() {
     }
   };
 
-  // ✅ Button width logic same as Step1Screen
   const buttonWidth = Platform.OS === 'web' ? '100%' : 328;
 
   return (
@@ -283,14 +286,22 @@ export default function ConfirmEmailScreen() {
           </Text>
 
           {linkDetectedMessage ? (
-            <Text style={{ marginTop: 10, color: isDark ? '#A7F3D0' : '#065F46' }}>{linkDetectedMessage}</Text>
+            <Text style={{ marginTop: 10, color: isDark ? '#A7F3D0' : '#065F46' }}>
+              {linkDetectedMessage}
+            </Text>
           ) : null}
 
-          {verified && <Text style={{ marginTop: 10, fontSize: 28, color: '#10B981' }}>You may continue now.</Text>}
+          {verified && (
+            <Text style={{ marginTop: 10, fontSize: 28, color: '#10B981' }}>
+              You may continue now.
+            </Text>
+          )}
 
           {/* Reduced spacing: put the "Didn't receive the link?" row close to the description */}
           <View style={{ marginTop: 18, flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ color: isDark ? '#D1D5DB' : '#4B5563' }}>Didn't receive the link?</Text>
+            <Text style={{ color: isDark ? '#D1D5DB' : '#4B5563' }}>
+              Didn&apos;t receive the link?
+            </Text>
 
             <Pressable
               onPress={handleResend}
@@ -298,7 +309,11 @@ export default function ConfirmEmailScreen() {
               style={{ marginLeft: 12 }}
             >
               <Text style={{ color: '#10B981' }}>
-                {resending ? 'Sending...' : resendCooldownSec > 0 ? `Retry in ${resendCooldownSec}s` : 'Re-send'}
+                {resending
+                  ? 'Sending...'
+                  : resendCooldownSec > 0
+                    ? `Retry in ${resendCooldownSec}s`
+                    : 'Re-send'}
               </Text>
             </Pressable>
 
@@ -310,7 +325,8 @@ export default function ConfirmEmailScreen() {
 
         {/* Continue button area (near bottom) */}
         <View style={{ alignItems: 'center' }}>
-          <Animated.View style={[{ width: '100%', maxWidth: 328 }, pulseStyle]}>
+          {/* CONFIRM BUTTON WIDTH WHEN TESTINGH  HERE!!! */}
+          <Animated.View style={[{ width: buttonWidth, maxWidth: 328 }, pulseStyle]}>
             <ButtonComponent
               title="Continue"
               onPress={handleContinue}
