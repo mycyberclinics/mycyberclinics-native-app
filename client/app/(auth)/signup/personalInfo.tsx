@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
   useColorScheme,
+  Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Controller, useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
@@ -27,9 +28,6 @@ import { useTrackOnboardingStep } from '@/lib/hooks/useTrackOnboardingStep';
 import parseError from '@/utils/parseError';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
-/**
- * Schema + Types
- */
 const ProfileCompletionSchema = BackendUserSchema.pick({
   role: true,
 }).extend({
@@ -41,6 +39,27 @@ const ProfileCompletionSchema = BackendUserSchema.pick({
 });
 
 type FormValues = z.infer<typeof ProfileCompletionSchema>;
+
+// Helper: wait for condition with timeout
+async function waitForCondition(
+  check: () => boolean | Promise<boolean>,
+  { timeoutMs = 3000, intervalMs = 100 } = {},
+) {
+  const start = Date.now();
+  return new Promise<boolean>((resolve) => {
+    const tick = async () => {
+      try {
+        const ok = await Promise.resolve(check());
+        if (ok) return resolve(true);
+      } catch (e) {
+        // ignore and retry
+      }
+      if (Date.now() - start >= timeoutMs) return resolve(false);
+      setTimeout(tick, intervalMs);
+    };
+    tick();
+  });
+}
 
 export default function PersonalInfoScreen() {
   useTrackOnboardingStep();
@@ -60,10 +79,8 @@ export default function PersonalInfoScreen() {
   const auth = getFirebaseAuth();
   const currentUser = auth.currentUser;
 
-  // success overlay flag
   const [success, setSuccess] = useState(false);
 
-  // --- GOOGLE PLACES AUTOCOMPLETE: WEB FIX ---
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (query.length < 2) {
@@ -73,8 +90,9 @@ export default function PersonalInfoScreen() {
       try {
         setLoadingSuggestions(true);
         const key = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
-        // On web, use the "cors-anywhere" proxy for development (never in production!)
-        let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${key}&language=en&components=country:ng`;
+        let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+          query,
+        )}&key=${key}&language=en&components=country:ng`;
         if (Platform.OS === 'web') {
           url = `https://corsproxy.io/?${encodeURIComponent(url)}`;
         }
@@ -98,7 +116,6 @@ export default function PersonalInfoScreen() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Use the typed FormValues for useForm.
   const resolver = zodResolver(ProfileCompletionSchema) as unknown as Resolver<FormValues>;
 
   const {
@@ -120,12 +137,8 @@ export default function PersonalInfoScreen() {
     },
   });
 
-  // For web date input
   const dob = watch('dob');
 
-  /**
-   * Try endpoints with POST/PUT (keeps network logic resilient while backend path is confirmed)
-   */
   async function tryEndpointsWithMethods(
     endpoints: string[],
     payload: any,
@@ -160,7 +173,6 @@ export default function PersonalInfoScreen() {
     throw lastErr;
   }
 
-  // Ensure onSubmit is typed with the same FormValues type
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
       setApiError(null);
@@ -169,7 +181,7 @@ export default function PersonalInfoScreen() {
         try {
           await updateProfile(currentUser, { displayName: data.displayName });
         } catch (err) {
-          // ignore
+          console.warn('[PersonalInfo] updateProfile failed (non-fatal):', err);
         }
       }
 
@@ -183,11 +195,13 @@ export default function PersonalInfoScreen() {
         bio: '',
       };
 
-      let token: string | undefined = undefined;
+      let token: string | undefined;
       try {
-        token = await currentUser?.getIdToken();
+        token = await getFirebaseAuth().currentUser?.getIdToken(true);
       } catch (err) {
-        // ignore
+        console.warn('[PersonalInfo] getIdToken(true) failed:', err);
+        // try best-effort to get token without forcing
+        token = await getFirebaseAuth().currentUser?.getIdToken();
       }
       const headers = {
         Authorization: token ? `Bearer ${token}` : undefined,
@@ -198,6 +212,19 @@ export default function PersonalInfoScreen() {
 
       const resp = await tryEndpointsWithMethods(endpoints, payload, headers);
 
+      // If backend returns 403 email-not-verified, surface friendly message
+      if (!resp || (resp.status && resp.status === 403)) {
+        const text = resp?.data?.error ?? resp?.data ?? 'Forbidden';
+        if (String(text).toLowerCase().includes('email not verified') || resp.status === 403) {
+          Alert.alert('Email not verified', 'We could not confirm your email on the server yet. Try "Check again" on the previous screen or sign out and sign in again.');
+          // keep user on VerifyEmail step or let them retry
+          useAuthStore.setState({ onboarding: true, lastStep: '/(auth)/signup/verifyEmail' });
+          router.replace('/(auth)/signup/verifyEmail');
+          return;
+        }
+      }
+
+      // update store and backend synced
       setOnboardingComplete();
       await syncProfile({ ...data, role: data.role });
       completeSignUp();
@@ -216,13 +243,28 @@ export default function PersonalInfoScreen() {
 
       if (normalizedRole === 'physician') {
         router.push('/(auth)/signup/doctorCredential');
-      } else {
-        setSuccess(true);
-        setTimeout(() => {
-          useAuthStore.setState({ onboarding: false });
-          router.replace('/(main)/home');
-        }, 1200);
+        return;
       }
+
+      // Patient flow: wait for stable store + firebase state
+      console.log('[PersonalInfo] store before wait:', useAuthStore.getState());
+      const firebaseAuth = getFirebaseAuth();
+
+      const ok = await waitForCondition(async () => {
+        const s = useAuthStore.getState();
+        const firebaseUser = firebaseAuth.currentUser;
+        const onboardingIsFalse = s.onboarding === false;
+        const hasUser = !!firebaseUser;
+        return onboardingIsFalse && hasUser;
+      }, { timeoutMs: 5000, intervalMs: 150 });
+
+      console.log('[PersonalInfo] waitForCondition result:', ok, 'store after wait:', useAuthStore.getState(), 'firebaseUser:', firebaseAuth.currentUser);
+
+      if (!ok) {
+        console.warn('[PersonalInfo] Navigation conditions not fully confirmed — proceeding anyway.');
+      }
+
+      router.replace('/(main)/home');
     } catch (error) {
       const e = parseError(error);
       const message =

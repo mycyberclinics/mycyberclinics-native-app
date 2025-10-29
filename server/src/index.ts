@@ -19,7 +19,35 @@ dotenv.config();
 
 const app = new Koa();
 app.use(cors());
-app.use(bodyParser());
+
+// DEV: Log incoming request method + Content-Type for debugging multipart issues.
+// Keep this as the very first middleware (after CORS) so we capture raw headers.
+app.use(async (ctx, next) => {
+  try {
+    const ct = ctx.request.headers["content-type"] || "";
+    if (process.env.NODE_ENV !== "production") {
+      console.info(`[incoming] ${ctx.method} ${ctx.url} Content-Type: ${ct}`);
+    }
+  } catch (e) {
+    // non-fatal logging error
+    console.warn("[incoming] header logging error", e);
+  }
+  return next();
+});
+
+// Conditional JSON body parser:
+// - Use koa-bodyparser for JSON and urlencoded requests
+// - If incoming Content-Type is multipart/form-data, skip bodyparser so route-level koaBody({ multipart: true }) can parse the stream.
+const jsonBodyParser = bodyParser();
+app.use(async (ctx, next) => {
+  const contentTypeHeader = ctx.request.headers["content-type"] || "";
+  const contentType = String(contentTypeHeader).toLowerCase();
+  const isMultipart = /^multipart\/form-data/i.test(contentType);
+  if (isMultipart) {
+    return next();
+  }
+  return jsonBodyParser(ctx, next);
+});
 
 // Ensure uploads directory exists for local file storage mode
 const uploadsDir = path.resolve(process.cwd(), "uploads");
@@ -33,9 +61,9 @@ try {
 }
 
 // Serve uploaded files at /uploads when using local storage mode
-// Use koa-mount to mount the static middleware at the desired path.
 app.use(mount("/uploads", serve(uploadsDir)));
 
+// Register routes
 app.use(authRoutes.routes());
 app.use(profileRoutes.routes());
 app.use(verificationRoutes.routes());

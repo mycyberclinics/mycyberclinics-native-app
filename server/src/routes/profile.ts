@@ -54,8 +54,10 @@ router.post("/api/profile/complete", firebaseAuth, async (ctx) => {
 // then koaBody parses multipart form and attaches ctx.request.files.
 router.post(
   "/api/profile/upload-doc",
-  firebaseAuth,
+  // Parse multipart/form-data first so the stream is consumed by the multipart parser.
   koaBody({ multipart: true }),
+  // Then run auth middleware which relies on headers (not request body).
+  firebaseAuth,
   async (ctx) => {
     const user = ctx.state.user as IUser;
     if (user.role !== "physician") {
@@ -79,8 +81,6 @@ router.post(
       );
     }
 
-    // Ensure required file keys exist and have expected properties
-    // Field names expected: mcdnLicense (required), additionalQualification (optional)
     if (!files || !files.mcdnLicense) {
       ctx.status = 400;
       ctx.body = {
@@ -90,17 +90,8 @@ router.post(
       return;
     }
 
-    // Accept single-file object or array (koa-body / formidable can supply either)
-    const ensureSingle = (f: any) => {
-      if (Array.isArray(f)) return f[0];
-      return f;
-    };
-
-    // Helper: get a usable temp path from file object (supports both path & filepath)
-    const getTempPath = (f: any) => {
-      if (!f) return null;
-      return f.path || f.filepath || f.filePath || f.tempFilePath || null;
-    };
+    const ensureSingle = (f: any) => (Array.isArray(f) ? f[0] : f);
+    const getTempPath = (f: any) => f && (f.path || f.filepath || f.filePath || f.tempFilePath || null);
 
     let mcdnLicenseUrl: string | undefined;
     let additionalQualificationUrl: string | undefined;
@@ -108,9 +99,16 @@ router.post(
     // Required file
     try {
       const mcdnFile = ensureSingle(files.mcdnLicense);
+
+      // DEV: Log the incoming mcdnFile object keys and shape for debugging
+      if (process.env.NODE_ENV !== "production") {
+        try {
+          console.info("[upload-doc] mcdnFile object keys:", Object.keys(mcdnFile || {}));
+        } catch {}
+      }
+
       const mcdnPath = getTempPath(mcdnFile);
       if (!mcdnPath) {
-        // Helpful debug info
         const keys = Object.keys(mcdnFile || {}).join(", ");
         ctx.status = 400;
         ctx.body = {
@@ -120,20 +118,14 @@ router.post(
         };
         return;
       }
-      mcdnLicenseUrl = await uploadToFirebaseStorage(
-        mcdnFile,
-        "mcdnLicense",
-        user.uid
-      );
+
+      mcdnLicenseUrl = await uploadToFirebaseStorage(mcdnFile, "mcdnLicense", user.uid);
     } catch (err: any) {
-      console.error(
-        "Error uploading mcdnLicense:",
-        err && (err.message || err)
-      );
+      console.error("Error uploading mcdnLicense:", err && (err.message || err));
       ctx.status = 500;
       ctx.body = {
         error: "Could not upload mcdnLicense",
-        details: String(err?.message || err),
+        details: process.env.NODE_ENV !== "production" ? String(err?.message || err) : undefined,
       };
       return;
     }
@@ -150,27 +142,18 @@ router.post(
             user.uid
           );
         } else {
-          // optional file missing path — log & continue (do not fail the required upload)
-          console.warn(
-            "additionalQualification uploaded but missing temp path; skipping"
-          );
+          console.warn("additionalQualification uploaded but missing temp path; skipping");
         }
       } catch (err: any) {
-        console.error(
-          "Error uploading additionalQualification:",
-          err && (err.message || err)
-        );
-        // Don't fail entirely if optional file fails; return partial success and warning.
+        console.error("Error uploading additionalQualification:", err && (err.message || err));
         user.mcdnLicense = mcdnLicenseUrl || user.mcdnLicense;
-        user.additionalQualification =
-          additionalQualificationUrl || user.additionalQualification;
+        user.additionalQualification = additionalQualificationUrl || user.additionalQualification;
         user.profileCompleted = !!user.mcdnLicense;
         await user.save();
-        ctx.status = 207; // multi-status — partial success
+        ctx.status = 207; // partial success
         ctx.body = {
           success: true,
-          warning:
-            "Uploaded mcdnLicense, but failed to upload additionalQualification",
+          warning: "Uploaded mcdnLicense, but failed to upload additionalQualification",
           user,
         };
         return;
@@ -179,14 +162,12 @@ router.post(
 
     // Persist URLs to DB and mark profileCompleted accordingly
     try {
-      //persist 'bio' if provided
       if (bio) {
         user.bio = bio;
       }
 
       user.mcdnLicense = mcdnLicenseUrl || user.mcdnLicense;
-      user.additionalQualification =
-        additionalQualificationUrl || user.additionalQualification;
+      user.additionalQualification = additionalQualificationUrl || user.additionalQualification;
       user.profileCompleted = !!user.mcdnLicense;
       await user.save();
 
@@ -196,6 +177,7 @@ router.post(
       ctx.status = 500;
       ctx.body = {
         error: "Internal error saving uploaded document references",
+        details: process.env.NODE_ENV !== "production" ? String(err?.message || err) : undefined,
       };
     }
   }
