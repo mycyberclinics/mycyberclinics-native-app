@@ -51,8 +51,8 @@ async function waitForCondition(
       try {
         const ok = await Promise.resolve(check());
         if (ok) return resolve(true);
-      } catch (e) {
-        // ignore and retry
+      } catch {
+        // ignore
       }
       if (Date.now() - start >= timeoutMs) return resolve(false);
       setTimeout(tick, intervalMs);
@@ -79,6 +79,7 @@ export default function PersonalInfoScreen() {
   const auth = getFirebaseAuth();
   const currentUser = auth.currentUser;
 
+  // ✅ no unused-variable warning
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -122,8 +123,6 @@ export default function PersonalInfoScreen() {
     control,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
-    setValue,
-    watch,
   } = useForm<FormValues>({
     resolver,
     mode: 'onChange',
@@ -137,8 +136,6 @@ export default function PersonalInfoScreen() {
     },
   });
 
-  const dob = watch('dob');
-
   async function tryEndpointsWithMethods(
     endpoints: string[],
     payload: any,
@@ -149,12 +146,10 @@ export default function PersonalInfoScreen() {
     for (const ep of endpoints) {
       for (const method of methods) {
         try {
-          let resp;
-          if (method === 'post') {
-            resp = await api.post(ep, payload, { headers });
-          } else {
-            resp = await api.put(ep, payload, { headers });
-          }
+          const resp =
+            method === 'post'
+              ? await api.post(ep, payload, { headers })
+              : await api.put(ep, payload, { headers });
           return resp;
         } catch (err) {
           lastErr = err;
@@ -164,9 +159,7 @@ export default function PersonalInfoScreen() {
             parsed.response?.statusCode ??
             parsed.response?.status_code ??
             undefined;
-          if (status && status !== 404) {
-            throw err;
-          }
+          if (status && status !== 404) throw err;
         }
       }
     }
@@ -195,40 +188,40 @@ export default function PersonalInfoScreen() {
         bio: '',
       };
 
+      const authInstance = getFirebaseAuth();
       let token: string | undefined;
       try {
-        token = await getFirebaseAuth().currentUser?.getIdToken(true);
+        token = await authInstance.currentUser?.getIdToken(true);
       } catch (err) {
-        console.warn('[PersonalInfo] getIdToken(true) failed:', err);
-        // try best-effort to get token without forcing
-        token = await getFirebaseAuth().currentUser?.getIdToken();
+        token = await authInstance.currentUser?.getIdToken();
       }
+
       const headers = {
         Authorization: token ? `Bearer ${token}` : undefined,
         'Content-Type': 'application/json',
       };
 
       const endpoints = ['/api/profile/complete', '/profile/complete', '/api/profile', '/profile'];
-
       const resp = await tryEndpointsWithMethods(endpoints, payload, headers);
 
-      // If backend returns 403 email-not-verified, surface friendly message
       if (!resp || (resp.status && resp.status === 403)) {
         const text = resp?.data?.error ?? resp?.data ?? 'Forbidden';
         if (String(text).toLowerCase().includes('email not verified') || resp.status === 403) {
-          Alert.alert('Email not verified', 'We could not confirm your email on the server yet. Try "Check again" on the previous screen or sign out and sign in again.');
-          // keep user on VerifyEmail step or let them retry
+          Alert.alert('Email not verified', 'Please verify your email before proceeding.');
           useAuthStore.setState({ onboarding: true, lastStep: '/(auth)/signup/verifyEmail' });
           router.replace('/(auth)/signup/verifyEmail');
           return;
         }
       }
 
-      // update store and backend synced
       setOnboardingComplete();
       await syncProfile({ ...data, role: data.role });
       completeSignUp();
 
+      const normalizedRole = data.role === 'doctor' ? 'physician' : data.role;
+
+      // ✅ Show success overlay and delay navigation
+      setSuccess(true);
       Toast.show({
         type: 'success',
         text1: 'Profile saved successfully 🎉',
@@ -239,32 +232,18 @@ export default function PersonalInfoScreen() {
         visibilityTime: 2500,
       });
 
-      const normalizedRole = data.role === 'doctor' ? 'physician' : data.role;
-
       if (normalizedRole === 'physician') {
-        router.push('/(auth)/signup/doctorCredential');
+        setTimeout(() => router.push('/(auth)/signup/doctorCredential'), 1200);
         return;
       }
 
-      // Patient flow: wait for stable store + firebase state
-      console.log('[PersonalInfo] store before wait:', useAuthStore.getState());
       const firebaseAuth = getFirebaseAuth();
-
-      const ok = await waitForCondition(async () => {
+      await waitForCondition(async () => {
         const s = useAuthStore.getState();
-        const firebaseUser = firebaseAuth.currentUser;
-        const onboardingIsFalse = s.onboarding === false;
-        const hasUser = !!firebaseUser;
-        return onboardingIsFalse && hasUser;
-      }, { timeoutMs: 5000, intervalMs: 150 });
+        return s.onboarding === false && !!firebaseAuth.currentUser;
+      });
 
-      console.log('[PersonalInfo] waitForCondition result:', ok, 'store after wait:', useAuthStore.getState(), 'firebaseUser:', firebaseAuth.currentUser);
-
-      if (!ok) {
-        console.warn('[PersonalInfo] Navigation conditions not fully confirmed — proceeding anyway.');
-      }
-
-      router.replace('/(main)/home');
+      setTimeout(() => router.replace('/(main)/home'), 1200);
     } catch (error) {
       const e = parseError(error);
       const message =
@@ -273,11 +252,7 @@ export default function PersonalInfoScreen() {
         e.message ||
         'Failed to save profile. Please check your internet connection and try again.';
       setApiError(message);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: message,
-      });
+      Toast.show({ type: 'error', text1: 'Error', text2: message });
     }
   };
 
@@ -314,7 +289,7 @@ export default function PersonalInfoScreen() {
               />
             </Pressable>
 
-            <View className="mt-4 mb-6">
+            <View className="mb-6 mt-4">
               <Text className="text-[22px] font-[700] text-[#0B1220] dark:text-white">
                 Almost Done 🎉
               </Text>
@@ -384,7 +359,7 @@ export default function PersonalInfoScreen() {
                     <input
                       type="date"
                       value={value ? new Date(value).toISOString().substring(0, 10) : ''}
-                      onChange={e => {
+                      onChange={(e) => {
                         if (e.target.value) {
                           onChange(new Date(e.target.value));
                         }
@@ -575,7 +550,7 @@ export default function PersonalInfoScreen() {
               </View>
             </View>
 
-            <View className="items-center mt-10 mb-8">
+            <View className="mb-8 mt-10 items-center">
               <ButtonComponent
                 title="Continue"
                 onPress={handleSubmit(onSubmit)}
@@ -589,24 +564,40 @@ export default function PersonalInfoScreen() {
           </View>
         </ScrollView>
       </Animated.View>
+
       {success && (
         <Animated.View
-          entering={FadeIn.duration(300)}
-          exiting={FadeOut.duration(300)}
-          className="absolute inset-0 items-center justify-center bg-black/60"
+          entering={ZoomIn.duration(500)}
+          exiting={ZoomOut.duration(300)}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+          }}
         >
-          <Animated.View
-            entering={ZoomIn.duration(500)}
-            exiting={ZoomOut.duration(300)}
-            className="items-center"
-          >
-            <View className="mb-3 h-[80px] w-[80px] items-center justify-center rounded-full bg-[#1ED28A]">
+          <View style={{ alignItems: 'center' }}>
+            <View
+              style={{
+                marginBottom: 12,
+                height: 80,
+                width: 80,
+                borderRadius: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#10B981',
+              }}
+            >
               <Feather name="check" size={38} color="#fff" />
             </View>
-            <Text className="text-[18px] font-[600] text-white">Profile Complete!</Text>
-          </Animated.View>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>
+              Profile Complete!
+            </Text>
+          </View>
         </Animated.View>
       )}
+
       <Toast />
     </>
   );

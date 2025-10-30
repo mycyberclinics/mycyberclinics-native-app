@@ -94,14 +94,14 @@ export default function SignInScreen() {
         }}
       >
         <View
-          className="h-full w-full justify-between bg-white dark:bg-[#0B0E11]"
+          className="h-full w-full justify-between bg-white dark:bg-[#0B0E11] px-6"
           style={{
             maxWidth: isDesktop ? 480 : isTablet ? 420 : 360,
             width: '100%',
             alignSelf: 'center',
             borderRadius: isDesktop ? 16 : 0,
             paddingVertical: isDesktop ? 40 : 0,
-            boxShadow: isDesktop ? '0px 4px 20px rgba(0, 0, 0, 0.1)' : undefined,
+            // boxShadow: isDesktop ? '0px 4px 20px rgba(0, 0, 0, 0.1)' : undefined,
           }}
         >
           <View className="flex flex-col items-center justify-center gap-6">

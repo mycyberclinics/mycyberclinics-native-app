@@ -152,7 +152,7 @@ export default function DoctorCredentialScreen() {
         type: mime,
       };
 
-      console.log("[DoctorCredential] normalized candidate:", candidate);
+      console.log("[DoctorCredential] normalized candidate:", candidate); 
 
       const fileErr = validateFile(candidate);
       if (fileErr) {
